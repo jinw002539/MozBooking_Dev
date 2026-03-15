@@ -1,4 +1,4 @@
-#Requisitos Funcionais
+# Requisitos Funcionais
 | ID | Descricao                                                                                                             |
 |----|-----------------------------------------------------------------------------------------------------------------------|
 |RF1 | O sistema deve permitir o cadastro de pacientes atraves de nome, e-mail, BI, contacto, validado obrigatoriamente que o e-mail e BI não estejam duplicados.|
@@ -8,7 +8,7 @@
 |RF5 | O sistema deve impedir a marcação de multiplas consultas para o mesmo horario, garantindo que o médico não tenha mais de um paciente e que um paciente não tenha mais de uma consula na mesma hora.|
 
 
-#Requisitos Nao Funcionais
+# Requisitos Nao Funcionais
 |ID | Descricao                                                                                                              |
 |---|------------------------------------------------------------------------------------------------------------------------|
 |RNF1|A verificação de disponibilidade e o bloqueio de horário devem ser confirmados em até 5 segundos.|
