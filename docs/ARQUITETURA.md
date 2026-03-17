@@ -17,7 +17,7 @@
 * **Base de dados:** Postgres SQL.
 
 ## Diagrama da arquitetura
-
+![Diagrama da Arquitetura](diagrama.jpg)
 
 
 ## Justificação
