@@ -1,3 +1,3 @@
 ## Diagrama de caso de uso
 ![Diagrama de caso de uso](clinica.png)
-## Espefificaoes(5-8)
+## Especificaoes(5-8)
