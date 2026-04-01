@@ -11,9 +11,9 @@
 
 ## Requisitos Não Funcionais (RNF)
 
-| ID | Nome do Requisito | Descrição | Prioridade |
+| ID | Categoria | Requisito Não-Funcional | Métrica/Critério |
 | :--- | :--- | :--- | :--- |
-| RNF01 | Desempenho | O sistema deve processar as confirmações de consultas em menos de 2 segundos. | High |
-| RNF02 | Disponibilidade | O sistema deve estar disponível 99.5% do tempo para garantir o acesso às marcações. | High |
-| RNF03 | Segurança | Os dados sensíveis como BI e histórico devem ser protegidos e acessíveis apenas por pessoal autorizado. | High |
-| RNF04 | Usabilidade | A interface deve ser simples e intuitiva para facilitar o uso por pacientes e recepcionistas. | Medium |
+| RNF01 | Desempenho | Tempo de resposta das marcações | O sistema deve processar as confirmações de consultas em menos de 2 segundos. |
+| RNF02 | Disponibilidade | Tempo de atividade do sistema | O sistema deve estar disponível 99.5% do tempo para garantir o acesso às marcações. |
+| RNF03 | Segurança | Proteção de dados sensíveis | Os dados como BI e histórico devem ser acessíveis apenas por pessoal autorizado através de criptografia. |
+| RNF04 | Usabilidade | Facilidade de uso da interface | A interface deve ser intuitiva, permitindo que um novo usuário realize uma marcação em menos de 3 minutos sem ajuda. |
