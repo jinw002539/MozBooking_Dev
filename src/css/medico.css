@@ -1,58 +1,63 @@
 body {
     margin: 0;
     font-family: Arial, sans-serif;
-    display: flex;
+    background: #f8f9fa;
 }
 
-.wrapper {
+.layout-medico {
     display: flex;
-    width: 100%;
-    height: 100vh;
+    min-height: 100vh;
 }
 
-.sidebar {
-    width: 250px;
+.menu-lateral {
+    width: 260px;
     background: #002b5c;
     color: white;
-    padding: 30px;
+    padding: 30px 20px;
 }
 
-.sidebar h3 {
+.perfil {
     border-bottom: 1px solid #004a99;
-    padding-bottom: 10px;
+    padding-bottom: 20px;
+    margin-bottom: 30px;
 }
 
-.sidebar ul {
+.menu-lateral ul {
     list-style: none;
     padding: 0;
-    margin-top: 40px;
 }
 
-.sidebar li {
+.menu-lateral li {
     padding: 15px;
-    margin-bottom: 10px;
-    border-radius: 5px;
+    margin-bottom: 5px;
+    border-radius: 4px;
     cursor: pointer;
+    transition: 0.3s;
 }
 
-.sidebar li.active { background: #00a8ff; }
+.menu-lateral li.ativo {
+    background: #00a8ff;
+    font-weight: bold;
+}
 
-.main-content {
+.conteudo-principal {
     flex: 1;
     padding: 40px;
-    background: #f4f7f6;
 }
 
 .tabela-medico {
     width: 100%;
     background: white;
     border-collapse: collapse;
+    margin-top: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
 .tabela-medico th {
+    background: #002b5c;
+    color: white;
     padding: 15px;
     text-align: left;
-    border-bottom: 2px solid #002b5c;
 }
 
 .tabela-medico td {
@@ -60,16 +65,21 @@ body {
     border-bottom: 1px solid #eee;
 }
 
-.btn-atender {
+.btn-concluir {
     background: #002b5c;
     color: white;
     border: none;
     padding: 10px 20px;
     border-radius: 4px;
     cursor: pointer;
+    font-weight: bold;
 }
 
-.espera {
-    color: orange;
-    font-weight: bold;
+.btn-concluir:hover {
+    background: #00a8ff;
+}
+
+.tabela-container {
+    max-height: 500px;
+    overflow-y: auto;
 }

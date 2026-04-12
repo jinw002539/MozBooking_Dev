@@ -74,3 +74,31 @@ body {
     border-radius: 4px;
     cursor: pointer;
 }
+
+.btn-historico {
+    background: #00a8ff;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 20px;
+    font-weight: bold;
+}
+
+.select-medico {
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: white;
+    width: 100%;
+}
+
+.btn-acao {
+    background: #002b5c;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+}

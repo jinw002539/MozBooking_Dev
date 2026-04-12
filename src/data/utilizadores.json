@@ -1,0 +1,16 @@
+{
+    "staff": [
+        {
+            "id": "armando",
+            "chave": "1234arma",
+            "nome": "Dr. Armando Silva",
+            "tipo": "medico"
+        },
+        {
+            "id": "maria",
+            "chave": "vida2026",
+            "nome": "Maria Santos",
+            "tipo": "recepcionista"
+        }
+    ]
+}
