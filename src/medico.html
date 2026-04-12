@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel Clínico - Vida</title>
+    <link rel="stylesheet" href="css/medico.css">
+</head>
+<body>
+    <div class="wrapper">
+        <nav class="sidebar">
+            <h3>Dr. Armando</h3>
+            <p>Especialidade: Medicina Geral</p>
+            <ul>
+                <li class="active">Pacientes em Espera</li>
+                <li>Histórico de Atendimentos</li>
+                <li>Sair</li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <h1>Agenda do Dia</h1>
+            <table class="tabela-medico">
+                <thead>
+                    <tr>
+                        <th>Codigo</th>
+                        <th>Processo</th>
+                        <th>Tipo</th>
+                        <th>Estado</th>
+                        <th>Acção</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>#V-8821</td>
+                        <td>P-2026-001</td>
+                        <td>Urgente</td>
+                        <td><span class="espera">Aguardando</span></td>
+                        <td><button class="btn-atender">Chamar Paciente</button></td>
+                    </tr>
+                    <tr>
+                        <td>#V-4412</td>
+                        <td>P-2025-102</td>
+                        <td>Normal</td>
+                        <td><span class="espera">Aguardando</span></td>
+                        <td><button class="btn-atender">Chamar Paciente</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </main>
+    </div>
+</body>
+</html>

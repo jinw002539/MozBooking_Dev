@@ -1,0 +1,75 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    display: flex;
+}
+
+.wrapper {
+    display: flex;
+    width: 100%;
+    height: 100vh;
+}
+
+.sidebar {
+    width: 250px;
+    background: #002b5c;
+    color: white;
+    padding: 30px;
+}
+
+.sidebar h3 {
+    border-bottom: 1px solid #004a99;
+    padding-bottom: 10px;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin-top: 40px;
+}
+
+.sidebar li {
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.sidebar li.active { background: #00a8ff; }
+
+.main-content {
+    flex: 1;
+    padding: 40px;
+    background: #f4f7f6;
+}
+
+.tabela-medico {
+    width: 100%;
+    background: white;
+    border-collapse: collapse;
+}
+
+.tabela-medico th {
+    padding: 15px;
+    text-align: left;
+    border-bottom: 2px solid #002b5c;
+}
+
+.tabela-medico td {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.btn-atender {
+    background: #002b5c;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.espera {
+    color: orange;
+    font-weight: bold;
+}
