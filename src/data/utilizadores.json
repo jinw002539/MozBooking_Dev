@@ -11,6 +11,12 @@
             "chave": "vida2026",
             "nome": "Maria Santos",
             "tipo": "recepcionista"
+        },
+        {
+            "id": "luisa",
+            "chave": "vida2026",
+            "nome": "Luísa Mário",
+            "tipo": "recepcionista"
         }
     ]
 }

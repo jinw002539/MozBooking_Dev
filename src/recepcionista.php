@@ -1,101 +1,290 @@
 <?php
-    session_start();
-    if(!isset($_SESSION['usuario_tipo']) || $_SESSION['usuario_tipo'] != 'recepcionista') header("Location: login.php");
+session_start();
+if (!isset($_SESSION['usuario_tipo']) || $_SESSION['usuario_tipo'] != 'recepcionista') {
+    header("Location: login.php"); exit;
+}
 
-    $dados = json_decode(file_get_contents('data/marcacao.json'), true) ?? [];
+$caminho = 'data/marcacao.json';
+$marcacoes = json_decode(file_get_contents($caminho), true) ?? [];
 
-    $hoje = date('Y-m-d');
-    $total_hoje = 0;
-    $total_sistema = count($dados);
-    $pendentes = 0;
+// Actualizar processo/médico via POST
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
+    if ($_POST['action'] == 'update') {
+        $ticket  = $_POST['ticket'];
+        $medico  = trim($_POST['medico']);
+        $processo= trim($_POST['processo']);
+        $estado  = trim($_POST['estado'] ?? 'Pendente');
 
-    foreach($dados as $d) {
-        if($d['data'] == $hoje) $total_hoje++;
-        if($d['estado'] == 'Pendente') $pendentes++;
+        foreach ($marcacoes as &$m) {
+            if ($m['ticket'] === $ticket) {
+                $m['medico']  = $medico;
+                $m['processo']= $processo;
+                $m['estado']  = $estado;
+                break;
+            }
+        }
+        file_put_contents($caminho, json_encode($marcacoes, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        header("Location: recepcionista.php?ok=1"); exit;
     }
+
+    // Cancelamento / notificação
+    if ($_POST['action'] == 'notificar') {
+        $msg_pt = trim($_POST['msg_pt']);
+        $msg_en = trim($_POST['msg_en']);
+        $ativa  = (int)($_POST['ativa'] ?? 1);
+        $notif  = ['ativa' => $ativa, 'mensagem_pt' => $msg_pt, 'mensagem_en' => $msg_en, 'criado_em' => date('Y-m-d H:i:s')];
+        file_put_contents('data/notificacao.json', json_encode($notif, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        header("Location: recepcionista.php?ok=2"); exit;
+    }
+}
+
+$hoje = date('Y-m-d');
+$marcacoes_hoje = array_filter($marcacoes, fn($m) => $m['data'] === $hoje);
+$pendentes_hoje = array_filter($marcacoes_hoje, fn($m) => $m['estado'] == 'Pendente');
+$total_geral   = count($marcacoes);
+$novos_hoje    = array_filter($marcacoes_hoje, fn($m) => $m['cliente'] == 'novo');
+$urgentes_hoje = array_filter($marcacoes_hoje, fn($m) => $m['urgencia'] == 'urgente');
+
+// Dados para gráfico semanal (últimos 7 dias)
+$chart_labels = [];
+$chart_vals   = [];
+for ($i = 6; $i >= 0; $i--) {
+    $d = date('Y-m-d', strtotime("-$i days"));
+    $chart_labels[] = date('d/m', strtotime($d));
+    $chart_vals[]   = count(array_filter($marcacoes, fn($m) => $m['data'] == $d));
+}
+
+// Ler notificação existente
+$notif_path = 'data/notificacao.json';
+$notif_atual = ['ativa'=>0,'mensagem_pt'=>'','mensagem_en'=>''];
+if (file_exists($notif_path)) {
+    $notif_atual = json_decode(file_get_contents($notif_path), true) ?? $notif_atual;
+}
+
+$medicos_lista = ["Dr. Armando Silva", "Dr.ª Luísa Mário", "Dr. Carlos Nhaca"];
 ?>
 <!DOCTYPE html>
-<html lang="pt-pt">
-    <head>
-        <meta charset="UTF-8">
-        <title>Receção | Vida</title>
-        <link rel="stylesheet" href="css/recepcionista.css">
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    </head>
-    <body>
-        <header class="topo-admin">
-            <h2>Vida - Gestão de Atendimento</h2>
-            <div><?php echo $_SESSION['usuario_nome']; ?> | <a href="logout.php" style="color:white;">Sair</a></div>
-        </header>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receção | Vida</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .brand { font-family: 'Playfair Display', serif; }
+        .sidebar { background: linear-gradient(180deg, #0a1f44 0%, #0d2a5e 100%); min-height: 100vh; }
+        select, input[type=text] { border: 2px solid #e5e7eb; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
+        select:focus, input:focus { border-color: #1565c0; outline: none; }
+        @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        .fade-in { animation: fadeIn .3s ease forwards; }
+        tr:hover td { background: #f0f7ff; }
+    </style>
+</head>
+<body class="bg-gray-50 flex">
 
-        <main class="container">
-            <section class="bloco" style="display: flex; gap: 20px; align-items: stretch;">
-                <div style="flex: 1; display: flex; flex-direction: column; gap: 10px;">
-                    <div style="background: #002b5c; color: white; padding: 20px; border-radius: 8px; text-align: center;">
-                        <small>Hoje</small>
-                        <h2><?php echo $total_hoje; ?></h2>
+<!-- SIDEBAR -->
+<aside class="sidebar w-56 flex-shrink-0 hidden md:flex flex-col p-6 sticky top-0 h-screen">
+    <div class="mb-8">
+        <div class="brand text-white text-xl"><span class="text-cyan-400">Vida</span></div>
+        <div class="text-blue-200 text-xs mt-1">Receção</div>
+    </div>
+    <nav class="flex-1 space-y-1">
+        <a href="recepcionista.php" class="flex items-center gap-3 bg-white/10 text-white rounded-xl px-4 py-3 text-sm font-medium">
+            <span></span> Painel
+        </a>
+        <a href="historico.php" class="flex items-center gap-3 text-white/60 hover:text-white hover:bg-white/5 rounded-xl px-4 py-3 text-sm font-medium transition">
+            <span></span> Histórico
+        </a>
+    </nav>
+    <div class="border-t border-white/10 pt-4">
+        <p class="text-white/50 text-xs mb-1"><?= htmlspecialchars($_SESSION['usuario_nome']) ?></p>
+        <a href="logout.php" class="text-red-300 hover:text-red-200 text-xs transition">→ Sair</a>
+    </div>
+</aside>
+
+<!-- MAIN -->
+<div class="flex-1 overflow-x-hidden">
+    <!-- TOP BAR -->
+    <header class="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-20">
+        <div>
+            <h1 class="text-xl font-bold text-gray-800">Gestão de Atendimento</h1>
+            <p class="text-sm text-gray-400"><?= date('l, d \d\e F \d\e Y') ?></p>
+        </div>
+        <div class="flex items-center gap-3">
+            <?php if (isset($_GET['ok'])): ?>
+            <span class="bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full fade-in">
+                <?= $_GET['ok'] == 1 ? '✅ Guardado!' : '🔔 Notificação enviada!' ?>
+            </span>
+            <?php endif; ?>
+            <a href="logout.php" class="md:hidden text-sm text-red-500 font-medium">Sair</a>
+        </div>
+    </header>
+
+    <main class="p-6 space-y-6">
+
+        <!-- STATS -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <?php
+            $stats = [
+                ['', count($marcacoes_hoje), 'Hoje', 'bg-blue-600'],
+                ['', count($pendentes_hoje), 'Pendentes', 'bg-amber-500'],
+                ['', count($novos_hoje), 'Novos Pacientes', 'bg-emerald-500'],
+                ['', count($urgentes_hoje), 'Urgentes', 'bg-red-500'],
+            ];
+            foreach($stats as $s): ?>
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <div class="text-3xl mb-2"><?= $s[0] ?></div>
+                <div class="text-3xl font-bold text-gray-800"><?= $s[1] ?></div>
+                <div class="text-sm text-gray-400 mt-1"><?= $s[2] ?></div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- GRÁFICO + NOTIFICAÇÃO -->
+        <div class="grid lg:grid-cols-2 gap-6">
+            <!-- Gráfico -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <h3 class="font-bold text-gray-700 mb-4 text-sm uppercase tracking-wider">Fluxo – Últimos 7 Dias</h3>
+                <canvas id="chartSemanal" height="120"></canvas>
+            </div>
+
+            <!-- Painel Notificação -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <h3 class="font-bold text-gray-700 mb-4 text-sm uppercase tracking-wider">🔔 Notificação de Cancelamento</h3>
+                <form method="POST">
+                    <input type="hidden" name="action" value="notificar">
+                    <div class="mb-3">
+                        <label class="text-xs font-semibold text-gray-500 block mb-1">Mensagem (PT)</label>
+                        <input type="text" name="msg_pt" value="<?= htmlspecialchars($notif_atual['mensagem_pt'] ?? '') ?>"
+                            class="w-full" placeholder="Ex: Consultas suspensas a 20/01 por cancelamento médico">
                     </div>
-                    <div style="background: #eef2f7; padding: 20px; border-radius: 8px; text-align: center;">
-                        <small>Pendentes</small>
-                        <h2 style="color: #d9534f;"><?php echo $pendentes; ?></h2>
+                    <div class="mb-3">
+                        <label class="text-xs font-semibold text-gray-500 block mb-1">Message (EN)</label>
+                        <input type="text" name="msg_en" value="<?= htmlspecialchars($notif_atual['mensagem_en'] ?? '') ?>"
+                            class="w-full" placeholder="Ex: Consultations on 20/01 cancelled">
                     </div>
-                </div>
-
-                <div style="flex: 2; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
-                    <canvas id="chartRececao" height="120"></canvas>
-                </div>
-
-                <div style="flex: 1;">
-                    <button onclick="location.href='historico.php'" class="btn-confirmar" style="width:100%; height:100%; font-size: 16px; cursor:pointer;">
-                        📂 VER HISTÓRICO<br><small>(<?php echo $total_sistema; ?> Registos)</small>
+                    <div class="flex items-center gap-4 mb-4">
+                        <label class="text-xs font-semibold text-gray-500">Notificação activa?</label>
+                        <select name="ativa" class="text-sm">
+                            <option value="1" <?= ($notif_atual['ativa'] ?? 0) ? 'selected' : '' ?>>Sim</option>
+                            <option value="0" <?= !($notif_atual['ativa'] ?? 0) ? 'selected' : '' ?>>Não</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold px-5 py-2 rounded-xl transition">
+                        Guardar Notificação
                     </button>
-                </div>
-            </section>
+                </form>
+            </div>
+        </div>
 
-            <section class="bloco">
-                <h3>Tickets para Processar</h3>
-                <table class="tabela-estilizada">
-                    <thead>
-                        <tr><th>Ticket</th><th>Data</th><th>Urgência</th><th>Médico</th><th>Processo</th><th>Ação</th></tr>
-                    </thead>
-                    <tbody>
-                        <?php $count = 0; foreach($dados as $m): if($m['estado'] == 'Pendente'): $count++; ?>
+        <!-- TABELA DE HOJE -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+                <h3 class="font-bold text-gray-800">Tickets de Hoje — <?= date('d/m/Y') ?></h3>
+                <span class="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-full font-semibold">
+                    <?= count($marcacoes_hoje) ?> marcações
+                </span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
                         <tr>
-                            <td><strong><?php echo $m['ticket']; ?></strong></td>
-                            <td><?php echo date('d/m/Y', strtotime($m['data'])); ?></td>
-                            <td><span class="tag <?php echo ($m['urgencia']=='urgente'?'novo':'antigo'); ?>"><?php echo strtoupper($m['urgencia']); ?></span></td>
-                            <td>
-                                <select class="input-processo" style="width: 150px;">
-                                    <option>Dr. Armando Silva</option>
-                                    <option>Dr.ª Luísa Mário</option>
+                            <th class="px-5 py-3 text-left">Ticket</th>
+                            <th class="px-5 py-3 text-left">Tipo</th>
+                            <th class="px-5 py-3 text-left">Paciente</th>
+                            <th class="px-5 py-3 text-left">Médico</th>
+                            <th class="px-5 py-3 text-left">Nº Processo</th>
+                            <th class="px-5 py-3 text-left">Estado</th>
+                            <th class="px-5 py-3 text-left">Acção</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        <?php if (empty($marcacoes_hoje)): ?>
+                        <tr><td colspan="7" class="px-5 py-10 text-center text-gray-400">Nenhuma marcação para hoje.</td></tr>
+                        <?php else: ?>
+                        <?php foreach ($marcacoes_hoje as $m): ?>
+                        <tr class="transition-colors">
+                            <form method="POST">
+                            <input type="hidden" name="action" value="update">
+                            <input type="hidden" name="ticket" value="<?= htmlspecialchars($m['ticket']) ?>">
+                            <td class="px-5 py-3">
+                                <span class="font-mono font-bold text-blue-800 bg-blue-50 px-2 py-1 rounded"><?= htmlspecialchars($m['ticket']) ?></span>
+                            </td>
+                            <td class="px-5 py-3">
+                                <?php if ($m['urgencia'] == 'urgente'): ?>
+                                    <span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full">🚨 URGENTE</span>
+                                <?php else: ?>
+                                    <span class="bg-gray-100 text-gray-500 text-xs font-medium px-2 py-1 rounded-full">Normal</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="px-5 py-3">
+                                <?php if ($m['cliente'] == 'novo'): ?>
+                                    <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-1 rounded-full">🆕 Novo</span>
+                                <?php else: ?>
+                                    <span class="text-gray-500 text-xs">Antigo</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="px-5 py-3">
+                                <select name="medico" class="text-xs min-w-[160px]">
+                                    <option value="">— Atribuir médico —</option>
+                                    <?php foreach ($medicos_lista as $med): ?>
+                                    <option value="<?= $med ?>" <?= $m['medico'] == $med ? 'selected' : '' ?>><?= $med ?></option>
+                                    <?php endforeach; ?>
                                 </select>
                             </td>
-                            <td><input type="text" placeholder="Papel nr..." class="input-processo"></td>
-                            <td><button class="btn-confirmar">Confirmar</button></td>
+                            <td class="px-5 py-3">
+                                <input type="text" name="processo" value="<?= htmlspecialchars($m['processo']) ?>"
+                                    placeholder="<?= $m['cliente'] == 'novo' ? 'Abrir processo...' : 'Opcional' ?>"
+                                    class="text-xs w-36 <?= $m['cliente'] == 'novo' && !$m['processo'] ? 'border-amber-400' : '' ?>">
+                            </td>
+                            <td class="px-5 py-3">
+                                <select name="estado" class="text-xs">
+                                    <option value="Pendente" <?= $m['estado']=='Pendente'?'selected':'' ?>> Pendente</option>
+                                    <option value="Em atendimento" <?= $m['estado']=='Em atendimento'?'selected':'' ?>> Em atendimento</option>
+                                    <option value="Concluido" <?= $m['estado']=='Concluido'?'selected':'' ?>> Concluído</option>
+                                    <option value="Cancelado" <?= $m['estado']=='Cancelado'?'selected':'' ?>> Cancelado</option>
+                                </select>
+                            </td>
+                            <td class="px-5 py-3">
+                                <button type="submit"
+                                    class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition">
+                                    Guardar
+                                </button>
+                            </td>
+                            </form>
                         </tr>
-                        <?php endif; endforeach; ?>
-                        <?php if($count == 0) echo "<tr><td colspan='6' style='text-align:center;'>Nenhuma marcação pendente.</td></tr>"; ?>
+                        <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
-            </section>
-        </main>
+            </div>
+        </div>
 
-        <script>
-            new Chart(document.getElementById('chartRececao'), {
-                type: 'line',
-                data: {
-                    labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'],
-                    datasets: [{
-                        label: 'Fluxo de Pacientes',
-                        data: [5, 12, 8, 15, 10, 20],
-                        borderColor: '#00a8ff',
-                        backgroundColor: 'rgba(0, 168, 255, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: { plugins: { legend: { display: false } } }
-            });
-        </script>
-    </body>
+    </main>
+</div>
+
+<script>
+new Chart(document.getElementById('chartSemanal'), {
+    type: 'bar',
+    data: {
+        labels: <?= json_encode($chart_labels) ?>,
+        datasets: [{
+            label: 'Marcações',
+            data: <?= json_encode($chart_vals) ?>,
+            backgroundColor: 'rgba(21,101,192,0.15)',
+            borderColor: '#1565c0',
+            borderWidth: 2,
+            borderRadius: 8
+        }]
+    },
+    options: {
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+});
+</script>
+</body>
 </html>
