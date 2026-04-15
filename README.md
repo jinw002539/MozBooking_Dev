@@ -1,4 +1,4 @@
-# 🏥 Sistema de Gestão de Marcações - Clínica Vida
+# Sistema de Gestão de Marcações - Clínica Vida
 
 Este projeto é um sistema de gestão de consultas médicas focado na **privacidade do paciente** e na **eficiência operacional**. O sistema elimina a necessidade de recolha de dados sensíveis (BI, Nome, Telefone) no ato da marcação, utilizando um sistema de **Tickets de Referência**.
 
@@ -20,7 +20,7 @@ Este projeto é um sistema de gestão de consultas médicas focado na **privacid
 | ID | Categoria | Descrição |
 | :--- | :--- | :--- |
 | **RNF01** | Privacidade | **Nenhum** dado pessoal (Nome, BI) é armazenado no servidor. O Ticket é a única ligação. |
-| **RNF02** | Persistência | Os dados são armazenados em ficheiros `JSON`, garantindo rapidez e portabilidade sem necessidade de SQL. |
+| **RNF02** | Persistência | Os dados são armazenados na base de dados postgre |
 | **RNF03** | Multi-idioma | A interface deve suportar Português (PT) e Inglês (EN). |
 | **RNF04** | Disponibilidade | O sistema deve permitir marcações 24/7, mesmo fora do horário de atendimento da clínica. |
 
@@ -41,9 +41,3 @@ Este projeto é um sistema de gestão de consultas médicas focado na **privacid
 * `medico.php`: Dashboard estatístico e fila de chamada.
 * `css/`: Estilos visuais separados por módulo.
 
----
-
-## 🚀 Como Executar
-1. Clone este repositório.
-2. Certifique-se de que a pasta `data/` tem permissões de escrita (CHMOD 777).
-3. Execute num servidor local (XAMPP, WAMP ou PHP Built-in server).
