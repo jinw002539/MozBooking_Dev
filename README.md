@@ -1,25 +1,50 @@
-# MozBooking_Dev
-1. Entrevista com o Administrador (Gestão e Regras)
-O objectivo aqui é validar o controle e a segurança.
-Pergunta 1: "Como vocês lidam hoje com faltas não avisadas e qual o impacto financeiro disso para a clínica?"
-Resposta esperada: "Perdemos muito dinheiro com horários vazios."
-Validação: Justifica o RF09 (Notificações) e o RF04 (Trava de 24h para cancelamento).
-Pergunta 2: "Quem deve ter permissão para alterar a escala de trabalho dos médicos e como vocês evitam que dois médicos usem a mesma sala?"
-Resposta esperada: "Apenas a gerência. Precisamos evitar choque de horários."
+# 🏥 Sistema de Gestão de Marcações - Clínica Vida
 
-2. Entrevista com o Médico (Operação e Histórico)
-O objectivo aqui é validar a agilidade e a informação.
-Pergunta 1: "Durante um atendimento, quanto tempo você gasta procurando o histórico de consultas anteriores do paciente?"
-Resposta esperada: "Muito tempo mexendo em fichas de papel ou sistemas lentos."
+Este projeto é um sistema de gestão de consultas médicas focado na **privacidade do paciente** e na **eficiência operacional**. O sistema elimina a necessidade de recolha de dados sensíveis (BI, Nome, Telefone) no ato da marcação, utilizando um sistema de **Tickets de Referência**.
 
-Pergunta 2: "Se um compromisso de última hora surgir, como você gostaria que o sistema reagisse com os pacientes já agendados?"
-Resposta esperada: "Gostaria que o sistema os avisasse automaticamente e sugerisse novos horários."
+## 📋 Requisitos do Sistema
 
-3. Entrevista com o Paciente (Autonomia e Facilidade)
-O objectivo aqui é validar a experiência do usuário (UX).
-Pergunta 1: "Qual é a sua maior frustração ao tentar agendar uma consulta pelo telefone ou WhatsApp?"
-Resposta esperada: "A demora em ser atendido ou não saber quais horários estão realmente livres."
+### 1. Requisitos Funcionais (RF)
+| ID | Nome | Descrição |
+| :--- | :--- | :--- |
+| **RF01** | Landing Page Informativa | O `index.php` deve exibir informações da clínica, fotos dos serviços e um botão de destaque para marcação. |
+| **RF02** | Marcação Sem Login | O paciente realiza o agendamento apenas informando se é novo/antigo, a data e a urgência. |
+| **RF03** | Geração de Ticket | O sistema gera automaticamente um código único (ex: #V-1234) que serve como identificação. |
+| **RF04** | Restrição de Datas | O calendário de marcação limita a escolha aos próximos 15 dias, bloqueando anos futuros e datas passadas. |
+| **RF05** | Painel da Rececionista | Interface para listar pendentes, atribuir o número de processo físico e definir o médico. |
+| **RF06** | Gestão de Cancelamentos | A rececionista pode cancelar consultas e emitir avisos globais no sistema. |
+| **RF07** | Painel do Médico/Diretor | Visualização da fila de espera em tempo real e gráficos de desempenho mensal. |
+| **RF08** | Notificações de Alerta | Exibição de avisos na Landing Page caso haja alteração no funcionamento da clínica. |
 
-Pergunta 2: "O que te daria mais segurança ao usar um aplicativo para marcar consultas de saúde?"
-Resposta esperada: "Saber que meus dados estão protegidos e receber um comprovante imediato."
+### 2. Requisitos Não Funcionais (RNF)
+| ID | Categoria | Descrição |
+| :--- | :--- | :--- |
+| **RNF01** | Privacidade | **Nenhum** dado pessoal (Nome, BI) é armazenado no servidor. O Ticket é a única ligação. |
+| **RNF02** | Persistência | Os dados são armazenados em ficheiros `JSON`, garantindo rapidez e portabilidade sem necessidade de SQL. |
+| **RNF03** | Multi-idioma | A interface deve suportar Português (PT) e Inglês (EN). |
+| **RNF04** | Disponibilidade | O sistema deve permitir marcações 24/7, mesmo fora do horário de atendimento da clínica. |
 
+---
+
+## 🛠️ Tecnologias Utilizadas
+* **Frontend:** HTML5, CSS3 (Design Responsivo), JavaScript.
+* **Backend:** PHP 8.x.
+* **Armazenamento:** JSON (Ficheiros planos).
+* **Gráficos:** Chart.js.
+
+---
+
+## 📂 Estrutura de Arquivos
+* `index.php`: Landing Page e formulário de marcação.
+* `login.php`: Acesso restrito para Staff.
+* `recepcionista.php`: Gestão de tickets e atribuição de processos.
+* `medico.php`: Dashboard estatístico e fila de chamada.
+* `data/`: Pasta contendo os ficheiros `marcacao.json` e `utilizadores.json`.
+* `css/`: Estilos visuais separados por módulo.
+
+---
+
+## 🚀 Como Executar
+1. Clone este repositório.
+2. Certifique-se de que a pasta `data/` tem permissões de escrita (CHMOD 777).
+3. Execute num servidor local (XAMPP, WAMP ou PHP Built-in server).
