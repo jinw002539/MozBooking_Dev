@@ -1,53 +1,55 @@
 ## Diagrama de caso de uso
-![Diagrama de caso de uso](clinica.png)
+![Diagrama de caso de uso](fakediagram.png)
 ## Especificações textuais dos Casos de Uso
+
+Este documento detalha as interações dos atores com o sistema, focando na simplicidade para o paciente e controle total para a staff clínica.
+
 ---
 
-### CU01: Marcar Consulta
+### CU01: Solicitar Ticket (Marcar Consulta)
 | Campo | Descrição |
 | :--- | :--- |
-| **Ator** | Paciente |
-| **Pré-condição** | Paciente autenticado no sistema |
-| **Pós-condição** | Consulta registada e visível na lista de marcações |
-| **Fluxo Principal** | 1. Paciente inicia a marcação escolhendo a especialidade médica.<br>2. Sistema exibe médicos disponíveis para a especialidade.<br>3. Paciente escolhe o médico.<br>4. Sistema apresenta calendário com dias e horários livres.<br>5. Paciente seleciona dia e horário.<br>6. Sistema solicita confirmação.<br>7. Paciente confirma a marcação. |
+| **Ator** | Paciente (Via Landing Page) |
+| **Pré-condição** | Nenhuma (Acesso público ao formulário) |
+| **Pós-condição** | Ticket gerado aleatoriamente e gravado como "Pendente" no sistema |
+| **Fluxo Principal** | 1. Paciente preenche o formulário: Novo/Antigo, Data (limite 15 dias) e Urgência.<br>2. Sistema valida a data (não pode ser passada).<br>3. Sistema gera Ticket aleatório (ex: `#V-1234`).<br>4. Sistema grava a marcação no ficheiro `marcacao.json`.<br>5. Sistema exibe o Ticket num modal de sucesso. |
 
 ---
 
-### CU02: Cancelar Consulta
+### CU03: Atribuir Processo e Médico (Confirmar Chegada)
 | Campo | Descrição |
 | :--- | :--- |
-| **Ator** | Paciente |
-| **Pré-condição** | Paciente autenticado e com consulta marcada |
-| **Pós-condição** | Estado da consulta atualizado para "Cancelada" |
-| **Fluxo Principal** | 1. Paciente visualiza consultas marcadas.<br>2. Sistema apresenta a lista.<br>3. Paciente escolhe a consulta que deseja cancelar.<br>4. Paciente pressiona o botão cancelar.<br>5. Sistema pede confirmação.<br>6. Paciente confirma.<br>7. Sistema atualiza o estado e liberta o horário. |
+| **Ator** | Rececionista |
+| **Pré-condição** | Rececionista autenticada no sistema |
+| **Pós-condição** | Ticket atualizado com nº de Processo e Médico, pronto para o atendimento |
+| **Fluxo Principal** | 1. Rececionista visualiza a lista de Tickets Pendentes do dia.<br>2. Paciente chega à clínica e informa o Ticket.<br>3. Rececionista localiza o Ticket na tabela.<br>4. Rececionista introduz manualmente o número do Processo Físico de papel.<br>5. Rececionista seleciona o Médico solicitado pelo paciente na lista.<br>6. Rececionista clica em "Confirmar".<br>7. Sistema atualiza o estado do ticket e envia para a fila do Médico. |
 
 ---
 
-### CU03: Visualizar Agenda
+### CU05: Gerir Cancelamentos e Avisos
+| Campo | Descrição |
+| :--- | :--- |
+| **Ator** | Rececionista |
+| **Pré-condição** | Rececionista autenticada no sistema |
+| **Pós-condição** | Aviso global de cancelamento visível na Landing Page para novos pacientes |
+| **Fluxo Principal** | 1. Rececionista acede à área de configurações de cancelamento.<br>2. Rececionista ativa o estado "Clínica Fechada/Consultas Canceladas".<br>3. Rececionista escreve uma mensagem de aviso para os pacientes.<br>4. Sistema grava a configuração.<br>5. Sistema exibe automaticamente o alerta vermelho no topo do `index.php`. |
+
+---
+
+### CU06: Visualizar Fila de Espera (Agenda do Dia)
 | Campo | Descrição |
 | :--- | :--- |
 | **Ator** | Médico |
 | **Pré-condição** | Médico autenticado no sistema |
-| **Pós-condição** | Médico visualiza os seus compromissos do dia/semana |
-| **Fluxo Principal** | 1. Médico pressiona o botão "Visualizar Agenda".<br>2. Sistema procura as consultas na Base de Dados filtrando pelo ID do Médico.<br>3. Sistema exibe a lista de consultas confirmadas. |
+| **Pós-condição** | Médico visualiza a sua fila de tickets para o dia atual |
+| **Fluxo Principal** | 1. Médico pressiona o botão "Ver Lista de Espera".<br>2. Sistema lê o JSON e filtra os tickets onde o Médico é o logado e a data é hoje.<br>3. Sistema exibe a lista organizada por ordem de chegada/urgência. |
 
 ---
 
-### CU04: Gerir Fluxo de Consultas (Painel de Controlo)
+### CU07: Concluir Consulta
 | Campo | Descrição |
 | :--- | :--- |
-| **Ator** | Rececionista |
-| **Pré-condição** | Rececionista autenticada |
-| **Pós-condição** | Estado do paciente atualizado no fluxo da clínica |
-| **Fluxo Principal** | 1. Rececionista visualiza a Agenda do Dia.<br>2. Sistema apresenta lista organizada por horário, médico e status.<br>3. Paciente chega à clínica e identifica-se.<br>4. Rececionista localiza a consulta na lista.<br>5. Rececionista altera estado para "Paciente em espera".<br>6. Sistema notifica o médico no painel dele. |
-
----
-
-### CU05: Receber Notificação
-| Campo | Descrição |
-| :--- | :--- |
-| **Ator Principal** | Sistema (Automático) |
-| **Ator Passivo** | Paciente |
-| **Pré-condição** | Consulta marcada no sistema |
-| **Pós-condição** | Paciente informado sobre o lembrete |
-| **Fluxo Principal** | 1. Sistema monitoriza a Base de Dados em intervalos regulares.<br>2. Sistema identifica consultas que ocorrerão em 24h.<br>3. Sistema formata a mensagem de lembrete.<br>4. Sistema envia notificação (Email/SMS).<br>5. Paciente recebe o alerta. |
+| **Ator** | Médico / Diretor |
+| **Pré-condição** | Médico autenticado e a atender um paciente |
+| **Pós-condição** | Estado do ticket atualizado para "Concluido", libertando a fila |
+| **Fluxo Principal** | 1. Médico atende o paciente (usando o processo físico de papel).<br>2. No final, o médico localiza o ticket na sua fila do sistema.<br>3. Médico clica no botão "Concluir".<br>4. Sistema altera o estado do ticket para "Concluido" no JSON.<br>5. Sistema atualiza o dashboard estatístico automaticamente. |
