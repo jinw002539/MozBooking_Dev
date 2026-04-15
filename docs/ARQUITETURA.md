@@ -1,4 +1,4 @@
-# 🏛️ Arquitetura do Sistema - Clínica Vida
+#  Arquitetura do Sistema - Clínica Vida
 
 ## Requisitos Principais do MVP (Minimum Viable Product)
 
