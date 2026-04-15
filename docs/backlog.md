@@ -1,19 +1,19 @@
-# Product Backlog – Sistema de Marcação Clínico
+# 📋 Product Backlog – Sistema Vida (Gestão de Consultas)
 
 | ID | User Story | Critério de Aceitação | Prioridade | Estimativa |
 | :--- | :--- | :--- | :--- | :--- |
-| US01 | Como paciente quero criar uma conta no sistema para poder marcar consultas. | Deve permitir inserir nome, telefone, email e senha.<br>Email não pode estar duplicado.<br>Senha deve ter no mínimo 8 caracteres e pelo menos 1 caractere especial.<br>Sistema deve confirmar cadastro com mensagem de sucesso. | Must | 8h |
-| US02 | Como usuário quero fazer login para acessar o sistema. | Deve validar email e senha.<br>Deve impedir login com dados incorretos.<br>Deve redirecionar para a área correta conforme o nível de acesso. | Must | 4h |
-| US03 | Como paciente quero marcar uma consulta para ser atendido pelo médico. | Deve permitir escolher data.<br>Deve permitir escolher horário disponível.<br>Não deve permitir marcar horário ocupado. | Must | 12h |
-| US04 | Como paciente quero cancelar uma consulta para liberar o horário. | Deve permitir cancelar até 24h antes.<br>Deve atualizar agenda automaticamente.<br>Deve enviar notificação de cancelamento. | Should | 6h |
-| US05 | Como paciente quero reagendar consulta para alterar data ou horário. | Deve permitir escolher novo horário disponível.<br>Deve atualizar agenda.<br>Deve enviar confirmação. | Should | 8h |
-| US06 | Como médico quero ver minha agenda diária para organizar meus atendimentos. | Deve mostrar lista de pacientes do dia.<br>Deve mostrar horário de cada consulta.<br>Deve permitir visualizar histórico. | Must | 10h |
-| US07 | Como administrador quero cadastrar médicos para disponibilizar consultas. | Deve permitir inserir nome, especialidade e horário de trabalho.<br>Não pode permitir duplicação.<br>Deve salvar no sistema automaticamente. | Must | 6h |
-| US08 | Como administrador quero definir horários disponíveis para organizar agenda da clínica. | Deve permitir definir horário inicial e final.<br>Não deve permitir conflitos de horário. | Should | 6h |
-| US09 | O sistema deve enviar notificação de confirmação para lembrar o paciente. | Deve enviar email ou SMS.<br>Deve ser enviado após marcação.<br>Deve conter data e horário. | Should | 8h |
-| US10 | Como paciente quero visualizar meu histórico para acompanhar consultas anteriores. | Deve mostrar lista de consultas passadas.<br>Deve mostrar médico e data. | Should | 4h |
-| US11 | Como medico quero concluir uma consulta para que o sistema libere o horário como vazio. | Deve permitir clicar em "Concluir".<br>Deve alterar o status da consulta para "Concluída".<br>Deve atualizar a disponibilidade do médico no sistema. | Should | 4h |
-| US12 | Como administrador quero gerar relatório diário para acompanhar atendimentos. | Deve mostrar número de consultas e o médico.<br>Deve permitir exportar PDF. | Should | 12h |
-| US13 | Como recepcionista quero pesquisar paciente para localizar rapidamente cadastro. | Deve permitir pesquisa por nome, telefone ou email.<br>Deve mostrar resultados correspondentes. | Should | 4h |
-| US14 | Como administrador quero bloquear horários específicos para evitar marcações. | Deve impedir marcação no horário bloqueado.<br>Deve mostrar mensagem de indisponível. | Must | 6h |
-| US15 | Como administrador quero visualizar painel geral para acompanhar funcionamento da clínica. | Deve mostrar número de consultas do dia.<br>Deve mostrar médicos disponíveis.<br>Deve atualizar automaticamente os relatórios diários. | Should | 10h |
+| **US01** | Como paciente, quero marcar uma consulta sem fornecer dados pessoais para garantir a minha privacidade. | O formulário deve pedir apenas: Tipo de cliente (Novo/Antigo), Data e Urgência. | **Must** | 8h |
+| **US02** | Como paciente, quero receber um Ticket automático após a marcação para usar como identificação na clínica. | Após o POST, deve exibir um modal com o código aleatório (ex: #V-2026) e instruções de uso. | **Must** | 4h |
+| **US03** | Como sistema, quero limitar a escolha de datas a 15 dias úteis para evitar marcações a longo prazo. | O campo de data deve bloquear dias passados, fins de semana e datas além de 15 dias da data atual. | **Must** | 6h |
+| **US04** | Como recepcionista, quero visualizar os tickets pendentes para organizar o fluxo de chegada. | Uma tabela em `recepcionista.php` que mostra todos os tickets do dia que ainda não têm médico atribuído. | **Must** | 8h |
+| **US05** | Como recepcionista, quero atribuir um médico e o número de processo físico a cada ticket. | O sistema deve permitir editar a linha do ticket para inserir o ID do processo (ex: P-100) e escolher o médico. | **Must** | 6h |
+| **US06** | Como médico, quero ver apenas os meus pacientes designados para o dia para iniciar o atendimento. | O painel do médico deve filtrar a lista de tickets pelo nome do médico logado e pela data atual. | **Must** | 8h |
+| **US07** | Como médico/diretor, quero concluir uma consulta para que o ticket saia da fila de espera. | Botão "Concluir" que altera o estado do ticket para "Concluído" e regista o timestamp final. | **Must** | 4h |
+| **US08** | Como recepcionista, quero ativar um aviso de cancelamento global visível no index para novos pacientes. | Um campo de texto no painel administrativo que publica um alerta vermelho no topo da landing page. | **Should** | 6h |
+| **US09** | Como diretor clínico, quero ver gráficos de volume de atendimento para análise de produtividade. | Uso de Chart.js para mostrar consultas Urgentes vs Normais e volume mensal. | **Should** | 10h |
+| **US10** | Como recepcionista, quero destacar visualmente "Clientes Novos" para saber quem precisa de abertura de processo. | Tickets marcados como "Novo" devem aparecer com uma tag amarela ou fundo diferenciado na tabela. | **Should** | 3h |
+| **US11** | Como paciente, quero ver o sistema em Português ou Inglês para facilitar a navegação. | Implementação de um seletor de idioma que traduz labels do formulário e menus. | **Should** | 12h |
+| **US12** | Como médico, quero ver o tempo de espera de cada paciente para gerir prioridades. | Mostrar um contador (ex: "Esperando há 20 min") calculado entre a criação do ticket e a hora atual. | **Could** | 6h |
+| **US13** | Como recepcionista, quero cancelar uma marcação específica caso o paciente desista. | Botão "Cancelar" que move o ticket para um estado inativo, removendo-o das estatísticas de hoje. | **Could** | 4h |
+| **US14** | Como diretor, quero exportar o relatório do dia para um ficheiro CSV para arquivo físico. | Botão "Exportar Relatório" que gera um arquivo com tickets, processos e médicos do dia. | **Could** | 8h |
+| **US15** | Como sistema, quero migrar o armazenamento de JSON para PostgreSQL (PGSQL) para maior segurança. | Refatoração da camada de dados para suportar queries SQL em vez de `file_put_contents`. | **Won't** | 24h |
