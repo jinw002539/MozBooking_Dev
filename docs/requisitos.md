@@ -1,7 +1,6 @@
 # 📋 Especificação de Requisitos - Sistema Vida
 ## 1. Requisitos Funcionais (RF)
 
-Os requisitos funcionais descrevem as ações que o sistema deve ser capaz de executar.
 
 | ID | Requisito | Descrição | Prioridade |
 | :--- | :--- | :--- | :--- |
@@ -18,7 +17,6 @@ Os requisitos funcionais descrevem as ações que o sistema deve ser capaz de ex
 
 ## 2. Requisitos Não Funcionais (RNF)
 
-Os requisitos não funcionais definem as propriedades e restrições do sistema.
 
 | ID | Categoria | Requisito | Métrica |
 | :--- | :--- | :--- | :--- |
