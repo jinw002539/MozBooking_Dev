@@ -1,19 +1,36 @@
-## Requisitos Funcionais (RF)
+# 📋 Especificação de Requisitos - Sistema Vida
+## 1. Requisitos Funcionais (RF)
 
-| ID | Nome do Requisito | Descrição | Prioridade |
+Os requisitos funcionais descrevem as ações que o sistema deve ser capaz de executar.
+
+| ID | Requisito | Descrição | Prioridade |
 | :--- | :--- | :--- | :--- |
-| RF01 | Cadastro de Pacientes | O sistema deve permitir o cadastro de pacientes com validação de BI e Email únicos. | Must |
-| RF02 | Marcação de Consultas | O sistema deve permitir o agendamento de consultas online selecionando médico e horário. | Must |
-| RF03 | Painel do Médico | O sistema deve permitir que o médico visualize a sua agenda e histórico de consultas. | Must |
-| RF04 | Painel da Recepcionista | O sistema deve permitir gerir o fluxo de pacientes e estados das consultas em tempo real. | Must |
-| RF05 | Regra para marcar | O sistema deve impedir tecnicamente a marcação de dois pacientes no mesmo horário para o mesmo médico. | Must |
-| RF06 | Conclusão de Consulta | O sistema deve permitir que o diretor clique em concluir consulta para o sistema libertar o horário como vazio. | Should |
+| **RF01** | **Landing Page Contextual** | O sistema deve apresentar uma página inicial com serviços (ECG, Ecografia, etc.) e acesso rápido ao agendamento. | Alta |
+| **RF02** | **Agendamento por Ticket** | O paciente deve marcar consulta sem fornecer dados pessoais, recebendo um Ticket gerado aleatoriamente (`#V-XXXX`). | Crítica |
+| **RF03** | **Seleção de Urgência** | O formulário deve permitir escolher entre consulta "Normal" ou "Urgente" (com aviso de taxa adicional). | Média |
+| **RF04** | **Restrição Temporal** | O calendário deve limitar a escolha de datas aos próximos 15 dias, bloqueando anos futuros e datas passadas. | Alta |
+| **RF05** | **Gestão de Processo Físico** | A rececionista deve poder associar o número do processo físico (ex: `P-500`) a um ticket pendente. | Alta |
+| **RF06** | **Atribuição de Médico** | A rececionista deve selecionar qual médico atenderá o ticket antes de o enviar para a fila de espera. | Alta |
+| **RF07** | **Painel de Chamada (Médico)** | O médico deve visualizar apenas os pacientes atribuídos a ele para o dia atual. | Alta |
+| **RF08** | **Finalização de Consulta** | O médico/diretor deve poder marcar uma consulta como "Concluída" para atualizar as estatísticas e limpar a fila. | Média |
+| **RF09** | **Sistema de Notificações** | A rececionista deve poder ativar um aviso global de "Consultas Canceladas/Remarcadas" visível na página inicial. | Alta |
+| **RF10** | **Dashboard Estatístico** | O diretor clínico deve visualizar gráficos de volume de consultas por mês e por tipo de urgência. | Baixa |
 
-## Requisitos Não Funcionais (RNF)
+## 2. Requisitos Não Funcionais (RNF)
 
-| ID | Categoria | Requisito Não-Funcional | Métrica/Critério |
+Os requisitos não funcionais definem as propriedades e restrições do sistema.
+
+| ID | Categoria | Requisito | Métrica |
 | :--- | :--- | :--- | :--- |
-| RNF01 | Desempenho | Tempo de resposta das marcações | O sistema deve processar as confirmações de consultas em menos de 2 segundos. |
-| RNF02 | Disponibilidade | Tempo de atividade do sistema | O sistema deve estar disponível 99.5% do tempo para garantir o acesso às marcações. |
-| RNF03 | Segurança | Proteção de dados sensíveis | Os dados como BI e histórico devem ser acessíveis apenas por pessoal autorizado através de criptografia. |
-| RNF04 | Usabilidade | Facilidade de uso da interface | A interface deve ser intuitiva, permitindo que um novo usuário realize uma marcação em menos de 3 minutos sem ajuda. |
+| **RNF01** | **Privacidade (GDPR)** | O sistema não deve solicitar Nome, BI, Telefone ou Email do paciente. | 0 dados pessoais em disco. |
+| **RNF02** | **Portabilidade** | O sistema deve ser baseado em ficheiros JSON para evitar dependência de servidores de BD SQL complexos. | Compatível com PHP 8.0+. |
+| **RNF03** | **Interface (UX)** | O formulário de marcação deve ser acessível via âncora para evitar scroll excessivo. | Máximo 2 cliques para iniciar. |
+| **RNF04** | **Localização** | O sistema deve suportar interface bilingue: Português (PT) e Inglês (EN). | Mudança de idioma global. |
+| **RNF05** | **Segurança** | O acesso às áreas de Receção e Direção deve ser protegido por chave de acesso única. | Encriptação simples de sessão. |
+
+## 3. Regras de Negócio (RN)
+
+1. **Consulta Urgente:** Considera-se urgente o atendimento das 07h-09h e após as 16h, embora o sistema aceite a marcação em qualquer horário.
+2. **Identificação:** O Ticket é a única chave de comunicação entre o paciente e a clínica.
+3. **Ano Corrente:** O sistema assume sempre o ano atual de forma automática para evitar erros de introdução manual.
+4. **Cancelamento:** Se um dia for cancelado pela receção, o sistema deve impedir novas marcações para essa data específica.
