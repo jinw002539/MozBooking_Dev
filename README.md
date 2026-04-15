@@ -29,7 +29,7 @@ Este projeto é um sistema de gestão de consultas médicas focado na **privacid
 ## 🛠️ Tecnologias Utilizadas
 * **Frontend:** HTML5, CSS3 (Design Responsivo), JavaScript.
 * **Backend:** PHP 8.x.
-* **Armazenamento:** JSON (Ficheiros planos).
+* **Armazenamento:** base de dados de postgre.
 * **Gráficos:** Chart.js.
 
 ---
@@ -39,7 +39,6 @@ Este projeto é um sistema de gestão de consultas médicas focado na **privacid
 * `login.php`: Acesso restrito para Staff.
 * `recepcionista.php`: Gestão de tickets e atribuição de processos.
 * `medico.php`: Dashboard estatístico e fila de chamada.
-* `data/`: Pasta contendo os ficheiros `marcacao.json` e `utilizadores.json`.
 * `css/`: Estilos visuais separados por módulo.
 
 ---
