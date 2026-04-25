@@ -1,26 +1,26 @@
 <?php
-session_start();
-if (!isset($_SESSION['usuario_nome'])) { header("Location: login.php"); exit; }
+	session_start();
+	if (!isset($_SESSION['usuario_nome'])) { header("Location: login.php"); exit; }
 
-$caminho = 'data/marcacao.json';
-$historico = file_exists($caminho) ? array_reverse(json_decode(file_get_contents($caminho), true) ?? []) : [];
+	$caminho = 'data/marcacao.json';
+	$historico = file_exists($caminho) ? array_reverse(json_decode(file_get_contents($caminho), true) ?? []) : [];
 
-// Filtros
-$filtro_estado = $_GET['estado'] ?? '';
-$filtro_tipo   = $_GET['tipo'] ?? '';
-$filtro_data   = $_GET['data'] ?? '';
-$q             = $_GET['q'] ?? '';
+	// Filtros
+	$filtro_estado = $_GET['estado'] ?? '';
+	$filtro_tipo   = $_GET['tipo'] ?? '';
+	$filtro_data   = $_GET['data'] ?? '';
+	$q             = $_GET['q'] ?? '';
 
-$filtrado = array_filter($historico, function($h) use ($filtro_estado, $filtro_tipo, $filtro_data, $q) {
-    if ($filtro_estado && $h['estado'] != $filtro_estado) return false;
-    if ($filtro_tipo   && $h['urgencia'] != $filtro_tipo) return false;
-    if ($filtro_data   && $h['data'] != $filtro_data) return false;
-    if ($q && stripos($h['ticket'], $q) === false && stripos($h['medico'], $q) === false) return false;
-    return true;
-});
+	$filtrado = array_filter($historico, function($h) use ($filtro_estado, $filtro_tipo, $filtro_data, $q) {
+	    if ($filtro_estado && $h['estado'] != $filtro_estado) return false;
+	    if ($filtro_tipo   && $h['urgencia'] != $filtro_tipo) return false;
+	    if ($filtro_data   && $h['data'] != $filtro_data) return false;
+	    if ($q && stripos($h['ticket'], $q) === false && stripos($h['medico'], $q) === false) return false;
+	    return true;
+	});
 
-$is_medico = $_SESSION['usuario_tipo'] == 'medico';
-$back_url  = $is_medico ? 'medico.php' : 'recepcionista.php';
+	$is_medico = $_SESSION['usuario_tipo'] == 'medico';
+	$back_url  = $is_medico ? 'medico.php' : 'recepcionista.php';
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -94,13 +94,18 @@ $back_url  = $is_medico ? 'medico.php' : 'recepcionista.php';
 
     <!-- TABELA -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <!-- PAGINAÇÃO (topo) -->
+        <div class="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2">
+            <span id="infoHistorico" class="text-xs text-gray-400"></span>
+            <div class="flex items-center gap-1" id="botoesHistorico"></div>
+        </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
                     <tr>
                         <th class="px-5 py-3 text-left">#</th>
                         <th class="px-5 py-3 text-left">Data</th>
-                        <th class="px-5 py-3 text-left">Ticket</th>
+                        <th class="px-5 py-3 text-left">Senha</th>
                         <th class="px-5 py-3 text-left">Paciente</th>
                         <th class="px-5 py-3 text-left">Tipo</th>
                         <th class="px-5 py-3 text-left">Médico</th>
@@ -108,7 +113,7 @@ $back_url  = $is_medico ? 'medico.php' : 'recepcionista.php';
                         <th class="px-5 py-3 text-left">Estado</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100">
+                <tbody id="tbodyHistorico" class="divide-y divide-gray-100">
                 <?php if (empty($filtrado)): ?>
                     <tr><td colspan="8" class="px-5 py-12 text-center text-gray-400">Nenhum registo encontrado.</td></tr>
                 <?php else: ?>
@@ -151,10 +156,64 @@ $back_url  = $is_medico ? 'medico.php' : 'recepcionista.php';
                 </tbody>
             </table>
         </div>
-        <div class="px-5 py-4 bg-gray-50 border-t border-gray-100 text-xs text-gray-400 text-right">
-            A mostrar <?= count($filtrado) ?> resultado(s)
-        </div>
     </div>
 </main>
+<script>
+(function(){
+    const PER_PAGE = 10;
+    const tbody    = document.getElementById('tbodyHistorico');
+    const infoEl   = document.getElementById('infoHistorico');
+    const botoesEl = document.getElementById('botoesHistorico');
+    const linhas   = Array.from(tbody.querySelectorAll('tr'));
+    let paginaAtual = 1;
+
+    function totalPaginas(){ return Math.max(1, Math.ceil(linhas.length / PER_PAGE)); }
+
+    function render(){
+        const total = totalPaginas();
+        const inicio = (paginaAtual - 1) * PER_PAGE;
+        const fim    = inicio + PER_PAGE;
+
+        linhas.forEach((tr, i) => {
+            tr.style.display = (i >= inicio && i < fim) ? '' : 'none';
+        });
+
+        infoEl.textContent = linhas.length === 0
+            ? 'Sem registos'
+            : `A mostrar ${Math.min(inicio + 1, linhas.length)}–${Math.min(fim, linhas.length)} de ${linhas.length}`;
+
+        botoesEl.innerHTML = '';
+        const btnStyle = (active) =>
+            `display:inline-flex;align-items:center;justify-content:center;` +
+            `min-width:32px;height:32px;padding:0 8px;border-radius:8px;font-size:13px;font-weight:600;` +
+            `border:1.5px solid ${active ? '#1565c0' : '#e5e7eb'};` +
+            `background:${active ? '#1565c0' : '#fff'};` +
+            `color:${active ? '#fff' : '#374151'};cursor:pointer;transition:all .15s;`;
+
+        const addBtn = (label, page, disabled) => {
+            const b = document.createElement('button');
+            b.innerHTML = label;
+            b.style.cssText = btnStyle(page === paginaAtual);
+            b.disabled = disabled;
+            if(disabled) b.style.opacity = '0.35';
+            b.onclick = () => { if(!disabled){ paginaAtual = page; render(); window.scrollTo({top: 0, behavior:'smooth'}); }};
+            botoesEl.appendChild(b);
+        };
+
+        addBtn('&laquo;', 1, paginaAtual === 1);
+        addBtn('&lsaquo;', paginaAtual - 1, paginaAtual === 1);
+
+        let s = Math.max(1, paginaAtual - 2);
+        let e = Math.min(total, s + 4);
+        s = Math.max(1, e - 4);
+        for(let p = s; p <= e; p++) addBtn(p, p, false);
+
+        addBtn('&rsaquo;', paginaAtual + 1, paginaAtual === total);
+        addBtn('&raquo;', total, paginaAtual === total);
+    }
+
+    render();
+})();
+</script>
 </body>
 </html>

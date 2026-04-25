@@ -486,5 +486,35 @@
         "medico": "",
         "processo": "",
         "criado_em": "2026-04-15 06:57:50"
+    },
+    {
+        "ticket": "V-9A07DB",
+        "data": "2026-04-27",
+        "cliente": "novo",
+        "urgencia": "urgente",
+        "estado": "Pendente",
+        "medico": "",
+        "processo": "",
+        "criado_em": "2026-04-25 17:50:54"
+    },
+    {
+        "ticket": "V-11BC82",
+        "data": "2026-04-27",
+        "cliente": "novo",
+        "urgencia": "urgente",
+        "estado": "Pendente",
+        "medico": "",
+        "processo": "",
+        "criado_em": "2026-04-25 17:52:55"
+    },
+    {
+        "ticket": "V-9DCA4B",
+        "data": "2026-04-27",
+        "cliente": "novo",
+        "urgencia": "urgente",
+        "estado": "Pendente",
+        "medico": "",
+        "processo": "",
+        "criado_em": "2026-04-25 17:52:58"
     }
 ]
