@@ -7,12 +7,29 @@
 	$caminho = 'data/marcacao.json';
 	$dados = json_decode(file_get_contents($caminho), true) ?? [];
 
+	$medico_clinica = "Dr. Armando Silva";
+
+	// Processar conclusão de consulta
+	if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['concluir_ticket'])) {
+	    $ticket = trim($_POST['concluir_ticket']);
+	    foreach ($dados as &$m) {
+	        if ($m['ticket'] === $ticket && $m['medico'] === $medico_clinica) {
+	            $m['estado'] = 'Concluido';
+	            break;
+	        }
+	    }
+	    unset($m);
+	    file_put_contents($caminho, json_encode($dados, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+	    header("Location: medico.php?ok=1");
+	    exit;
+	}
+
 	$hoje = date('Y-m-d');
 	$semana_inicio = date('Y-m-d', strtotime('monday this week'));
 	$semana_fim    = date('Y-m-d', strtotime('sunday this week'));
 	$mes_atual     = date('Y-m');
 
-	$hoje_list    = array_filter($dados, fn($d) => $d['data'] == $hoje);
+	$hoje_list    = array_filter($dados, fn($d) => $d['data'] == $hoje && $d['medico'] === $medico_clinica && $d['estado'] !== 'Concluido' && $d['estado'] !== 'Cancelado');
 	$semana_list  = array_filter($dados, fn($d) => $d['data'] >= $semana_inicio && $d['data'] <= $semana_fim);
 	$mes_list     = array_filter($dados, fn($d) => str_starts_with($d['data'], $mes_atual));
 	$urgentes     = array_filter($dados, fn($d) => $d['urgencia'] == 'urgente');
@@ -95,7 +112,10 @@
 		       <h1 class="text-xl font-bold text-gray-800">Painel de Direção</h1>
 		       <p class="text-sm text-gray-400"><?= date('l, d \d\e F \d\e Y') ?></p>
 		   </div>
-		   <div class="flex gap-2">
+		   <div class="flex gap-2 items-center">
+		       <?php if (isset($_GET['ok'])): ?>
+		       <span class="bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full fade-in">Consulta concluída!</span>
+		       <?php endif; ?>
 		       <a href="historico.php" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-xl transition font-semibold">Ver Histórico Completo</a>
 		   </div>
 	    </header>
@@ -181,9 +201,9 @@
 		                       <th class="px-5 py-3 text-left">Ticket</th>
 		                       <th class="px-5 py-3 text-left">Tipo</th>
 		                       <th class="px-5 py-3 text-left">Paciente</th>
-		                       <th class="px-5 py-3 text-left">Médico</th>
 		                       <th class="px-5 py-3 text-left">Processo</th>
 		                       <th class="px-5 py-3 text-left">Estado</th>
+		                       <th class="px-5 py-3 text-left">Acção</th>
 		                   </tr>
 		               </thead>
 		               <tbody id="tbodyMedico" class="divide-y divide-gray-100">
@@ -203,7 +223,6 @@
 		                               ? '<span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-1 rounded-full">🆕 Novo</span>'
 		                               : '<span class="text-gray-500 text-xs">Antigo</span>' ?>
 		                       </td>
-		                       <td class="px-5 py-3 text-gray-700"><?= htmlspecialchars($m['medico'] ?: '—') ?></td>
 		                       <td class="px-5 py-3 text-gray-700"><?= htmlspecialchars($m['processo'] ?: '—') ?></td>
 		                       <td class="px-5 py-3">
 		                           <?php
@@ -212,6 +231,16 @@
 		                           $dots = ['Pendente'=>'⏳','Em atendimento'=>'🔵','Concluido'=>'✅','Cancelado'=>'❌'];
 		                           echo "<span class='bg-{$cor}-100 text-{$cor}-700 text-xs px-2 py-1 rounded-full font-medium'>{$dots[$m['estado']]} {$m['estado']}</span>";
 		                           ?>
+		                       </td>
+		                       <td class="px-5 py-3">
+		                           <form method="POST" style="display:inline">
+		                               <input type="hidden" name="concluir_ticket" value="<?= htmlspecialchars($m['ticket']) ?>">
+		                               <button type="submit"
+		                                   onclick="return confirm('Concluir consulta do ticket <?= htmlspecialchars($m['ticket']) ?>?')"
+		                                   class="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition">
+		                                   Concluir Consulta
+		                               </button>
+		                           </form>
 		                       </td>
 		                   </tr>
 		                   <?php endforeach; ?>

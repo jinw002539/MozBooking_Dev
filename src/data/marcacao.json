@@ -492,9 +492,9 @@
         "data": "2026-04-27",
         "cliente": "novo",
         "urgencia": "urgente",
-        "estado": "Pendente",
-        "medico": "",
-        "processo": "",
+        "estado": "Concluido",
+        "medico": "Dr. Armando Silva",
+        "processo": "0002",
         "criado_em": "2026-04-25 17:50:54"
     },
     {
@@ -516,5 +516,25 @@
         "medico": "",
         "processo": "",
         "criado_em": "2026-04-25 17:52:58"
+    },
+    {
+        "ticket": "V-F627E7",
+        "data": "2026-04-29",
+        "cliente": "antigo",
+        "urgencia": "normal",
+        "estado": "Pendente",
+        "medico": "",
+        "processo": "",
+        "criado_em": "2026-04-28 15:24:59"
+    },
+    {
+        "ticket": "V-3FDFC9",
+        "data": "2026-04-29",
+        "cliente": "novo",
+        "urgencia": "urgente",
+        "estado": "Pendente",
+        "medico": "",
+        "processo": "",
+        "criado_em": "2026-04-28 15:25:54"
     }
 ]

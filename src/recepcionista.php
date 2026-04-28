@@ -15,6 +15,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
         $processo= trim($_POST['processo']);
         $estado  = trim($_POST['estado'] ?? 'Pendente');
 
+        // Regras de estado:
+        // - "Em atendimento" NUNCA permitido pela recepcionista
+        // - Se médico da clínica (Armando Silva): só Pendente ou Cancelado — ele próprio conclui
+        // - Se médico externo: pode ser Pendente, Concluido ou Cancelado
+        if ($estado === 'Em atendimento') $estado = 'Pendente';
+        if ($medico === 'Dr. Armando Silva' && !in_array($estado, ['Pendente', 'Cancelado'])) {
+            $estado = 'Pendente';
+        }
+
         foreach ($marcacoes as &$m) {
             if ($m['ticket'] === $ticket) {
                 $m['medico']  = $medico;
@@ -61,7 +70,9 @@ if (file_exists($notif_path)) {
     $notif_atual = json_decode(file_get_contents($notif_path), true) ?? $notif_atual;
 }
 
-$medicos_lista = ["Dr. Armando Silva", "Dr.ª Luísa Mário", "Dr. Carlos Nhaca"];
+$medicos_lista   = ["Dr. Armando Silva", "Dr.ª Luísa Mário", "Dr. Carlos Nhaca"];
+$medico_clinica  = "Dr. Armando Silva"; // único médico interno — conclui ele próprio
+$medicos_externos = ["Dr.ª Luísa Mário", "Dr. Carlos Nhaca"]; // recepcionista pode editar/concluir
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -210,9 +221,12 @@ $medicos_lista = ["Dr. Armando Silva", "Dr.ª Luísa Mário", "Dr. Carlos Nhaca"
 		                   <?php if (empty($marcacoes_hoje)): ?>
 		                   <tr><td colspan="7" class="px-5 py-10 text-center text-gray-400">Nenhuma marcação para hoje.</td></tr>
 		                   <?php else: ?>
-		                   <?php foreach ($marcacoes_hoje as $m): ?>
-		                   <tr class="transition-colors">
-		                       <form method="POST">
+		                   <?php foreach ($marcacoes_hoje as $m):
+		                       $med_saved   = $m['medico'] ?? '';
+		                       $estado_safe = ($m['estado'] === 'Em atendimento') ? 'Pendente' : ($m['estado'] ?? 'Pendente');
+		                   ?>
+		                   <tr class="transition-colors" data-ticket="<?= htmlspecialchars($m['ticket']) ?>">
+		                       <form method="POST" class="contents">
 		                       <input type="hidden" name="action" value="update">
 		                       <input type="hidden" name="ticket" value="<?= htmlspecialchars($m['ticket']) ?>">
 		                       <td class="px-5 py-3">
@@ -232,11 +246,13 @@ $medicos_lista = ["Dr. Armando Silva", "Dr.ª Luísa Mário", "Dr. Carlos Nhaca"
 		                               <span class="text-gray-500 text-xs">Antigo</span>
 		                           <?php endif; ?>
 		                       </td>
+		                       <!-- SELECT MÉDICO — ao mudar, JS actualiza estado + botão -->
 		                       <td class="px-5 py-3">
-		                           <select name="medico" class="text-xs min-w-[160px]">
+		                           <select name="medico" class="sel-medico text-xs min-w-[160px]"
+		                               data-saved="<?= htmlspecialchars($med_saved) ?>">
 		                               <option value="">— Atribuir médico —</option>
 		                               <?php foreach ($medicos_lista as $med): ?>
-		                               <option value="<?= $med ?>" <?= $m['medico'] == $med ? 'selected' : '' ?>><?= $med ?></option>
+		                               <option value="<?= $med ?>" <?= $med_saved == $med ? 'selected' : '' ?>><?= $med ?></option>
 		                               <?php endforeach; ?>
 		                           </select>
 		                       </td>
@@ -245,18 +261,17 @@ $medicos_lista = ["Dr. Armando Silva", "Dr.ª Luísa Mário", "Dr. Carlos Nhaca"
 		                               placeholder="<?= $m['cliente'] == 'novo' ? 'Abrir processo...' : 'Opcional' ?>"
 		                               class="text-xs w-36 <?= $m['cliente'] == 'novo' && !$m['processo'] ? 'border-amber-400' : '' ?>">
 		                       </td>
+		                       <!-- SELECT ESTADO — opções controladas por JS -->
 		                       <td class="px-5 py-3">
-		                           <select name="estado" class="text-xs">
-		                               <option value="Pendente" <?= $m['estado']=='Pendente'?'selected':'' ?>> Pendente</option>
-		                               <option value="Em atendimento" <?= $m['estado']=='Em atendimento'?'selected':'' ?>> Em atendimento</option>
-		                               <option value="Concluido" <?= $m['estado']=='Concluido'?'selected':'' ?>> Concluído</option>
-		                               <option value="Cancelado" <?= $m['estado']=='Cancelado'?'selected':'' ?>> Cancelado</option>
+		                           <select name="estado" class="sel-estado text-xs"
+		                               data-saved-estado="<?= htmlspecialchars($estado_safe) ?>">
+		                               <!-- opções injectadas por JS via actualizarLinha() -->
 		                           </select>
 		                       </td>
+		                       <!-- BOTÃO — controlado por JS -->
 		                       <td class="px-5 py-3">
-		                           <button type="submit"
-		                               class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition">
-		                               Guardar
+		                           <button type="submit" class="btn-acao text-xs font-semibold px-4 py-2 rounded-lg transition whitespace-nowrap">
+		                               <!-- texto/cor injectados por JS via actualizarLinha() -->
 		                           </button>
 		                       </td>
 		                       </form>
@@ -272,6 +287,84 @@ $medicos_lista = ["Dr. Armando Silva", "Dr.ª Luísa Mário", "Dr. Carlos Nhaca"
 	</div>
 
 	<script>
+	// ── CONSTANTES MÉDICOS (usadas pelo JS reactivo) ────────────────────
+	const MEDICO_CLINICA   = <?= json_encode($medico_clinica) ?>;
+	const MEDICOS_EXTERNOS = <?= json_encode(array_values($medicos_externos)) ?>;
+
+	// ── LÓGICA REACTIVA POR LINHA ────────────────────────────────────────
+	// Chama-se ao carregar a página e sempre que o select de médico muda.
+	// Actualiza: opções do select de estado + estilo/texto do botão.
+	function actualizarLinha(selMedico) {
+	    const tr      = selMedico.closest('tr');
+	    const medico  = selMedico.value;
+	    const selEst  = tr.querySelector('.sel-estado');
+	    const btn     = tr.querySelector('.btn-acao');
+	    const saved   = selEst.dataset.savedEstado || 'Pendente'; // estado guardado na BD
+
+	    const isClinica  = (medico === MEDICO_CLINICA);
+	    const isExterno  = MEDICOS_EXTERNOS.includes(medico);
+	    const isSemMed   = (medico === '');
+
+	    // ── Opções do select de estado ──────────────────────────
+	    let opcoes = [];
+	    if (isClinica) {
+	        // Armando: só Pendente / Cancelado (ele mesmo conclui)
+	        opcoes = [
+	            { v: 'Pendente',  l: 'Pendente' },
+	            { v: 'Cancelado', l: 'Cancelado' },
+	        ];
+	    } else if (isExterno) {
+	        opcoes = [
+	            { v: 'Pendente',  l: 'Pendente' },
+	            { v: 'Concluido', l: 'Concluído' },
+	            { v: 'Cancelado', l: 'Cancelado' },
+	        ];
+	    } else {
+	        // Sem médico
+	        opcoes = [
+	            { v: 'Pendente',  l: 'Pendente' },
+	            { v: 'Cancelado', l: 'Cancelado' },
+	        ];
+	    }
+
+	    // Rebuild select, preservando o valor guardado se existir neste conjunto
+	    selEst.innerHTML = '';
+	    opcoes.forEach(o => {
+	        const opt = document.createElement('option');
+	        opt.value = o.v;
+	        opt.textContent = o.l;
+	        // Seleccionar o valor guardado se disponível, senão "Pendente"
+	        if (o.v === saved) opt.selected = true;
+	        selEst.appendChild(opt);
+	    });
+	    // Garantir que há sempre algo seleccionado
+	    if (!selEst.value) selEst.value = 'Pendente';
+
+	    // ── Botão ────────────────────────────────────────────────
+	    if (isClinica) {
+	        btn.textContent = '✉️ Mandar Consulta';
+	        btn.className = 'btn-acao text-xs font-semibold px-4 py-2 rounded-lg transition whitespace-nowrap ' +
+	                        'bg-indigo-600 hover:bg-indigo-700 text-white';
+	    } else if (isExterno) {
+	        btn.textContent = 'Guardar';
+	        btn.className = 'btn-acao text-xs font-semibold px-4 py-2 rounded-lg transition whitespace-nowrap ' +
+	                        'bg-blue-600 hover:bg-blue-700 text-white';
+	    } else {
+	        // Sem médico — botão neutro/desactivado visualmente
+	        btn.textContent = 'Guardar';
+	        btn.className = 'btn-acao text-xs font-semibold px-4 py-2 rounded-lg transition whitespace-nowrap ' +
+	                        'bg-gray-300 hover:bg-gray-400 text-gray-600 cursor-not-allowed';
+	    }
+	}
+
+	// Inicializar todas as linhas ao carregar
+	document.addEventListener('DOMContentLoaded', () => {
+	    document.querySelectorAll('.sel-medico').forEach(sel => {
+	        actualizarLinha(sel);
+	        sel.addEventListener('change', () => actualizarLinha(sel));
+	    });
+	});
+
 	new Chart(document.getElementById('chartSemanal'), {
 	    type: 'bar',
 	    data: {
