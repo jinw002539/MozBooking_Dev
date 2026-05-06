@@ -29,7 +29,10 @@
 	$semana_fim    = date('Y-m-d', strtotime('sunday this week'));
 	$mes_atual     = date('Y-m');
 
-	$hoje_list    = array_filter($dados, fn($d) => $d['data'] == $hoje && $d['medico'] === $medico_clinica && $d['estado'] !== 'Concluido' && $d['estado'] !== 'Cancelado');
+	$hoje_list_activos  = array_filter($dados, fn($d) => $d['data'] == $hoje && $d['medico'] === $medico_clinica && !in_array($d['estado'], ['Concluido', 'Cancelado']));
+$hoje_list_concluidos = array_filter($dados, fn($d) => $d['data'] == $hoje && $d['medico'] === $medico_clinica && in_array($d['estado'], ['Concluido', 'Cancelado']));
+$hoje_list_ordenado   = array_merge(array_values($hoje_list_activos), array_values($hoje_list_concluidos));
+$hoje_list = $hoje_list_activos; // mantido para KPIs (count activos)
 	$semana_list  = array_filter($dados, fn($d) => $d['data'] >= $semana_inicio && $d['data'] <= $semana_fim);
 	$mes_list     = array_filter($dados, fn($d) => str_starts_with($d['data'], $mes_atual));
 	$urgentes     = array_filter($dados, fn($d) => $d['urgencia'] == 'urgente');
@@ -198,7 +201,7 @@
 		           <table class="w-full text-sm">
 		               <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
 		                   <tr>
-		                       <th class="px-5 py-3 text-left">Ticket</th>
+		                       <th class="px-5 py-3 text-left">Senha</th>
 		                       <th class="px-5 py-3 text-left">Tipo</th>
 		                       <th class="px-5 py-3 text-left">Paciente</th>
 		                       <th class="px-5 py-3 text-left">Processo</th>
@@ -207,12 +210,14 @@
 		                   </tr>
 		               </thead>
 		               <tbody id="tbodyMedico" class="divide-y divide-gray-100">
-		               <?php if (empty($hoje_list)): ?>
+		               <?php if (empty($hoje_list_ordenado)): ?>
 		                   <tr><td colspan="6" class="px-5 py-10 text-center text-gray-400">Nenhuma marcação para hoje.</td></tr>
 		               <?php else: ?>
-		                   <?php foreach ($hoje_list as $m): ?>
-		                   <tr class="transition-colors">
-		                       <td class="px-5 py-3"><span class="font-mono font-bold text-blue-800 bg-blue-50 px-2 py-1 rounded text-xs"><?= htmlspecialchars($m['ticket']) ?></span></td>
+		                   <?php foreach ($hoje_list_ordenado as $m):
+		                       $concluida = in_array($m['estado'], ['Concluido', 'Cancelado']);
+		                   ?>
+		                   <tr class="transition-colors" <?= $concluida ? 'style="background:#f3f4f6;opacity:0.6;"' : '' ?>>
+		                       <td class="px-5 py-3"><span class="font-mono font-bold <?= $concluida ? 'text-gray-400 bg-gray-200' : 'text-blue-800 bg-blue-50' ?> px-2 py-1 rounded text-xs"><?= htmlspecialchars($m['ticket']) ?></span></td>
 		                       <td class="px-5 py-3">
 		                           <?= $m['urgencia']=='urgente'
 		                               ? '<span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full">🚨 URGENTE</span>'
@@ -233,6 +238,9 @@
 		                           ?>
 		                       </td>
 		                       <td class="px-5 py-3">
+		                           <?php if ($concluida): ?>
+		                               <span class="text-xs text-gray-400 italic">—</span>
+		                           <?php else: ?>
 		                           <form method="POST" style="display:inline">
 		                               <input type="hidden" name="concluir_ticket" value="<?= htmlspecialchars($m['ticket']) ?>">
 		                               <button type="submit"
@@ -241,6 +249,7 @@
 		                                   Concluir Consulta
 		                               </button>
 		                           </form>
+		                           <?php endif; ?>
 		                       </td>
 		                   </tr>
 		                   <?php endforeach; ?>

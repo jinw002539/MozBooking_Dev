@@ -1,78 +1,83 @@
 <?php
-session_start();
-if (!isset($_SESSION['usuario_tipo']) || $_SESSION['usuario_tipo'] != 'recepcionista') {
-    header("Location: login.php"); exit;
-}
+	session_start();
+	if (!isset($_SESSION['usuario_tipo']) || $_SESSION['usuario_tipo'] != 'recepcionista') {
+	    header("Location: login.php"); 
+	    exit;
+	}
 
-$caminho = 'data/marcacao.json';
-$marcacoes = json_decode(file_get_contents($caminho), true) ?? [];
+	$caminho = 'data/marcacao.json';
+	$marcacoes = json_decode(file_get_contents($caminho), true) ?? [];
 
-// Actualizar processo/médico via POST
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
-    if ($_POST['action'] == 'update') {
-        $ticket  = $_POST['ticket'];
-        $medico  = trim($_POST['medico']);
-        $processo= trim($_POST['processo']);
-        $estado  = trim($_POST['estado'] ?? 'Pendente');
+	// Actualizar processo/médico via POST
+	if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
+	    if ($_POST['action'] == 'update') {
+		   $ticket  = $_POST['ticket'];
+		   $medico  = trim($_POST['medico']);
+		   $processo= trim($_POST['processo']);
+		   $estado  = trim($_POST['estado'] ?? 'Pendente');
 
-        // Regras de estado:
-        // - "Em atendimento" NUNCA permitido pela recepcionista
-        // - Se médico da clínica (Armando Silva): só Pendente ou Cancelado — ele próprio conclui
-        // - Se médico externo: pode ser Pendente, Concluido ou Cancelado
-        if ($estado === 'Em atendimento') $estado = 'Pendente';
-        if ($medico === 'Dr. Armando Silva' && !in_array($estado, ['Pendente', 'Cancelado'])) {
-            $estado = 'Pendente';
-        }
+		   // Regras de estado:
+		   // - "Em atendimento" NUNCA permitido pela recepcionista
+		   // - Se médico da clínica (Armando Silva): só Pendente ou Cancelado — ele próprio conclui
+		   // - Se médico externo: pode ser Pendente, Concluido ou Cancelado
+		   if ($estado === 'Em atendimento') $estado = 'Pendente';
+		   if ($medico === 'Dr. Armando Silva' && !in_array($estado, ['Pendente', 'Cancelado'])) {
+		       $estado = 'Pendente';
+		   }
 
-        foreach ($marcacoes as &$m) {
-            if ($m['ticket'] === $ticket) {
-                $m['medico']  = $medico;
-                $m['processo']= $processo;
-                $m['estado']  = $estado;
-                break;
-            }
-        }
-        file_put_contents($caminho, json_encode($marcacoes, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        header("Location: recepcionista.php?ok=1"); exit;
-    }
+		   foreach ($marcacoes as &$m) {
+		       if ($m['ticket'] === $ticket) {
+		           $m['medico']  = $medico;
+		           $m['processo']= $processo;
+		           $m['estado']  = $estado;
+		           break;
+		       }
+		   }
+		   file_put_contents($caminho, json_encode($marcacoes, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+		   header("Location: recepcionista.php?ok=1"); exit;
+	    }
 
-    // Cancelamento / notificação
-    if ($_POST['action'] == 'notificar') {
-        $msg_pt = trim($_POST['msg_pt']);
-        $msg_en = trim($_POST['msg_en']);
-        $ativa  = (int)($_POST['ativa'] ?? 1);
-        $notif  = ['ativa' => $ativa, 'mensagem_pt' => $msg_pt, 'mensagem_en' => $msg_en, 'criado_em' => date('Y-m-d H:i:s')];
-        file_put_contents('data/notificacao.json', json_encode($notif, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        header("Location: recepcionista.php?ok=2"); exit;
-    }
-}
+	    // Cancelamento / notificação
+	    if ($_POST['action'] == 'notificar') {
+		   $msg_pt = trim($_POST['msg_pt']);
+		   $msg_en = trim($_POST['msg_en']);
+		   $ativa  = (int)($_POST['ativa'] ?? 1);
+		   $notif  = ['ativa' => $ativa, 'mensagem_pt' => $msg_pt, 'mensagem_en' => $msg_en, 'criado_em' => date('Y-m-d H:i:s')];
+		   file_put_contents('data/notificacao.json', json_encode($notif, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+		   header("Location: recepcionista.php?ok=2"); exit;
+	    }
+	}
 
-$hoje = date('Y-m-d');
-$marcacoes_hoje = array_filter($marcacoes, fn($m) => $m['data'] === $hoje);
-$pendentes_hoje = array_filter($marcacoes_hoje, fn($m) => $m['estado'] == 'Pendente');
-$total_geral   = count($marcacoes);
-$novos_hoje    = array_filter($marcacoes_hoje, fn($m) => $m['cliente'] == 'novo');
-$urgentes_hoje = array_filter($marcacoes_hoje, fn($m) => $m['urgencia'] == 'urgente');
+	$hoje = date('Y-m-d');
+	$marcacoes_hoje = array_filter($marcacoes, fn($m) => $m['data'] === $hoje);
+	$pendentes_hoje = array_filter($marcacoes_hoje, fn($m) => $m['estado'] == 'Pendente');
+	// Separar activas (editáveis) das concluídas/canceladas (cinzentas, no fundo)
+	$marcacoes_activas   = array_filter($marcacoes_hoje, fn($m) => !in_array($m['estado'], ['Concluido', 'Cancelado']));
+	$marcacoes_concluidas = array_filter($marcacoes_hoje, fn($m) => in_array($m['estado'], ['Concluido', 'Cancelado']));
+	$marcacoes_ordenadas = array_merge(array_values($marcacoes_activas), array_values($marcacoes_concluidas));
+	$total_geral   = count($marcacoes);
+	$novos_hoje    = array_filter($marcacoes_hoje, fn($m) => $m['cliente'] == 'novo');
+	$urgentes_hoje = array_filter($marcacoes_hoje, fn($m) => $m['urgencia'] == 'urgente');
 
-// Dados para gráfico semanal (últimos 7 dias)
-$chart_labels = [];
-$chart_vals   = [];
-for ($i = 6; $i >= 0; $i--) {
-    $d = date('Y-m-d', strtotime("-$i days"));
-    $chart_labels[] = date('d/m', strtotime($d));
-    $chart_vals[]   = count(array_filter($marcacoes, fn($m) => $m['data'] == $d));
-}
+	// Dados para gráfico semanal (últimos 7 dias)
+	$chart_labels = [];
+	$chart_vals   = [];
+	for ($i = 6; $i >= 0; $i--) {
+	    $d = date('Y-m-d', strtotime("-$i days"));
+	    $chart_labels[] = date('d/m', strtotime($d));
+	    $chart_vals[]   = count(array_filter($marcacoes, fn($m) => $m['data'] == $d));
+	}
 
-// Ler notificação existente
-$notif_path = 'data/notificacao.json';
-$notif_atual = ['ativa'=>0,'mensagem_pt'=>'','mensagem_en'=>''];
-if (file_exists($notif_path)) {
-    $notif_atual = json_decode(file_get_contents($notif_path), true) ?? $notif_atual;
-}
+	// Ler notificação existente
+	$notif_path = 'data/notificacao.json';
+	$notif_atual = ['ativa'=>0,'mensagem_pt'=>'','mensagem_en'=>''];
+	if (file_exists($notif_path)) {
+	    $notif_atual = json_decode(file_get_contents($notif_path), true) ?? $notif_atual;
+	}
 
-$medicos_lista   = ["Dr. Armando Silva", "Dr.ª Luísa Mário", "Dr. Carlos Nhaca"];
-$medico_clinica  = "Dr. Armando Silva"; // único médico interno — conclui ele próprio
-$medicos_externos = ["Dr.ª Luísa Mário", "Dr. Carlos Nhaca"]; // recepcionista pode editar/concluir
+	$medicos_lista   = ["Dr. Armando Silva", "Dr.ª Luísa Mário", "Dr. Carlos Nhaca"];
+	$medico_clinica  = "Dr. Armando Silva"; // único médico interno — conclui ele próprio
+	$medicos_externos = ["Dr.ª Luísa Mário", "Dr. Carlos Nhaca"]; // recepcionista pode editar/concluir
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -218,19 +223,21 @@ $medicos_externos = ["Dr.ª Luísa Mário", "Dr. Carlos Nhaca"]; // recepcionist
 		                   </tr>
 		               </thead>
 		               <tbody id="tbodyRecep" class="divide-y divide-gray-100">
-		                   <?php if (empty($marcacoes_hoje)): ?>
+		                   <?php if (empty($marcacoes_ordenadas)): ?>
 		                   <tr><td colspan="7" class="px-5 py-10 text-center text-gray-400">Nenhuma marcação para hoje.</td></tr>
 		                   <?php else: ?>
-		                   <?php foreach ($marcacoes_hoje as $m):
+		                   <?php foreach ($marcacoes_ordenadas as $m):
 		                       $med_saved   = $m['medico'] ?? '';
 		                       $estado_safe = ($m['estado'] === 'Em atendimento') ? 'Pendente' : ($m['estado'] ?? 'Pendente');
+		                       $concluida   = in_array($m['estado'], ['Concluido', 'Cancelado']);
 		                   ?>
-		                   <tr class="transition-colors" data-ticket="<?= htmlspecialchars($m['ticket']) ?>">
+		                   <tr class="transition-colors" data-ticket="<?= htmlspecialchars($m['ticket']) ?>"
+		                       <?= $concluida ? 'style="background:#f3f4f6;opacity:0.6;"' : '' ?>>
 		                       <form method="POST" class="contents">
 		                       <input type="hidden" name="action" value="update">
 		                       <input type="hidden" name="ticket" value="<?= htmlspecialchars($m['ticket']) ?>">
 		                       <td class="px-5 py-3">
-		                           <span class="font-mono font-bold text-blue-800 bg-blue-50 px-2 py-1 rounded"><?= htmlspecialchars($m['ticket']) ?></span>
+		                           <span class="font-mono font-bold <?= $concluida ? 'text-gray-400 bg-gray-200' : 'text-blue-800 bg-blue-50' ?> px-2 py-1 rounded"><?= htmlspecialchars($m['ticket']) ?></span>
 		                       </td>
 		                       <td class="px-5 py-3">
 		                           <?php if ($m['urgencia'] == 'urgente'): ?>
@@ -246,8 +253,10 @@ $medicos_externos = ["Dr.ª Luísa Mário", "Dr. Carlos Nhaca"]; // recepcionist
 		                               <span class="text-gray-500 text-xs">Antigo</span>
 		                           <?php endif; ?>
 		                       </td>
-		                       <!-- SELECT MÉDICO — ao mudar, JS actualiza estado + botão -->
 		                       <td class="px-5 py-3">
+		                           <?php if ($concluida): ?>
+		                               <span class="text-gray-400 text-xs"><?= htmlspecialchars($med_saved ?: '—') ?></span>
+		                           <?php else: ?>
 		                           <select name="medico" class="sel-medico text-xs min-w-[160px]"
 		                               data-saved="<?= htmlspecialchars($med_saved) ?>">
 		                               <option value="">— Atribuir médico —</option>
@@ -255,24 +264,37 @@ $medicos_externos = ["Dr.ª Luísa Mário", "Dr. Carlos Nhaca"]; // recepcionist
 		                               <option value="<?= $med ?>" <?= $med_saved == $med ? 'selected' : '' ?>><?= $med ?></option>
 		                               <?php endforeach; ?>
 		                           </select>
+		                           <?php endif; ?>
 		                       </td>
 		                       <td class="px-5 py-3">
+		                           <?php if ($concluida): ?>
+		                               <span class="text-gray-400 text-xs"><?= htmlspecialchars($m['processo'] ?: '—') ?></span>
+		                           <?php else: ?>
 		                           <input type="text" name="processo" value="<?= htmlspecialchars($m['processo']) ?>"
 		                               placeholder="<?= $m['cliente'] == 'novo' ? 'Abrir processo...' : 'Opcional' ?>"
 		                               class="text-xs w-36 <?= $m['cliente'] == 'novo' && !$m['processo'] ? 'border-amber-400' : '' ?>">
+		                           <?php endif; ?>
 		                       </td>
-		                       <!-- SELECT ESTADO — opções controladas por JS -->
 		                       <td class="px-5 py-3">
+		                           <?php if ($concluida): ?>
+		                               <span class="text-xs px-2 py-1 rounded-full font-medium <?= $m['estado'] === 'Concluido' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500' ?>">
+		                                   <?= $m['estado'] === 'Concluido' ? '✅ Concluído' : '❌ Cancelado' ?>
+		                               </span>
+		                           <?php else: ?>
 		                           <select name="estado" class="sel-estado text-xs"
 		                               data-saved-estado="<?= htmlspecialchars($estado_safe) ?>">
 		                               <!-- opções injectadas por JS via actualizarLinha() -->
 		                           </select>
+		                           <?php endif; ?>
 		                       </td>
-		                       <!-- BOTÃO — controlado por JS -->
 		                       <td class="px-5 py-3">
+		                           <?php if ($concluida): ?>
+		                               <span class="text-xs text-gray-400 italic">—</span>
+		                           <?php else: ?>
 		                           <button type="submit" class="btn-acao text-xs font-semibold px-4 py-2 rounded-lg transition whitespace-nowrap">
 		                               <!-- texto/cor injectados por JS via actualizarLinha() -->
 		                           </button>
+		                           <?php endif; ?>
 		                       </td>
 		                       </form>
 		                   </tr>
