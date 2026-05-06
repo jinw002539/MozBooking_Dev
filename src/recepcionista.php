@@ -105,7 +105,7 @@
 	<aside class="sidebar w-56 flex-shrink-0 hidden md:flex flex-col p-6 sticky top-0 h-screen">
 	    <div class="mb-8">
 		   <div class="brand text-white text-xl"><span class="text-cyan-400">Vida</span></div>
-		   <div class="text-blue-200 text-xs mt-1">Receção</div>
+		   <div class="text-blue-200 text-xs mt-1">Recepção</div>
 	    </div>
 	    <nav class="flex-1 space-y-1">
 		   <a href="recepcionista.php" class="flex items-center gap-3 bg-white/10 text-white rounded-xl px-4 py-3 text-sm font-medium">
@@ -117,7 +117,7 @@
 	    </nav>
 	    <div class="border-t border-white/10 pt-4">
 		   <p class="text-white/50 text-xs mb-1"><?= htmlspecialchars($_SESSION['usuario_nome']) ?></p>
-		   <a href="logout.php" class="text-red-300 hover:text-red-200 text-xs transition">→ Sair</a>
+		   <a href="logout.php" class="text-red-300 hover:text-red-200 text-xs transition">Sair</a>
 	    </div>
 	</aside>
 

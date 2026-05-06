@@ -104,7 +104,7 @@ $hoje_list = $hoje_list_activos; // mantido para KPIs (count activos)
 	    <div class="border-t border-white/10 pt-4">
 		   <p class="text-white/70 text-sm font-medium"><?= htmlspecialchars($_SESSION['usuario_nome']) ?></p>
 		   <p class="text-white/30 text-xs">Diretor Clínico</p>
-		   <a href="logout.php" class="text-red-300 hover:text-red-200 text-xs mt-2 inline-block transition">→ Terminar Sessão</a>
+		   <a href="logout.php" class="text-red-300 hover:text-red-200 text-xs mt-2 inline-block transition">Terminar Sessão</a>
 	    </div>
 	</aside>
 

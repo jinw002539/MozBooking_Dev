@@ -512,9 +512,9 @@
         "data": "2026-05-06",
         "cliente": "novo",
         "urgencia": "urgente",
-        "estado": "Pendente",
-        "medico": "",
-        "processo": "",
+        "estado": "Concluido",
+        "medico": "Dr. Armando Silva",
+        "processo": "1017",
         "criado_em": "2026-04-25 17:52:58"
     },
     {
@@ -536,5 +536,15 @@
         "medico": "Dr. Carlos Nhaca",
         "processo": "1011",
         "criado_em": "2026-04-28 15:25:54"
+    },
+    {
+        "ticket": "V-10CC99",
+        "data": "2026-05-08",
+        "cliente": "antigo",
+        "urgencia": "normal",
+        "estado": "Pendente",
+        "medico": "",
+        "processo": "",
+        "criado_em": "2026-05-06 06:25:53"
     }
 ]

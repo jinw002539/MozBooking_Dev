@@ -83,7 +83,7 @@
 
             <div class="text-center mt-6">
                 <a href="index.php" class="text-blue-200/60 hover:text-blue-200 text-xs transition">
-                    ← Voltar ao site principal
+                    Voltar ao site principal
                 </a>
             </div>
         </div>
