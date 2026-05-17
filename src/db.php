@@ -9,8 +9,8 @@
     define('DB_HOST', 'localhost');
     define('DB_PORT', '5432');
     define('DB_NAME', 'clinica_vida');
-    define('DB_USER', 'kali');
-    define('DB_PASS', 'kalilinux');      // <-- altere para a sua senha
+    define('DB_USER', 'seu_user');
+    define('DB_PASS', 'sua_senha');      // <-- altere para a sua senha
 
     // ── MÉDICOS (configuração central) ───────────────────────────────────────────
     define('MEDICO_CLINICA', 'Dr. Armando Silva');
