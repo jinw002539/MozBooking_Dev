@@ -1,14 +1,23 @@
 <?php
-    // Endpoint AJAX para confirmar ticket
+    /**
+     * confirmar_ticket.php — endpoint AJAX (recepcionista)
+     * Atribui médico e processo a um ticket; mantém estado Pendente
+     * até o médico concluir na sua própria tela.
+     */
     session_start();
-    if (!isset($_SESSION['usuario_tipo']) || $_SESSION['usuario_tipo'] != 'recepcionista') {
+    require_once __DIR__ . '/db.php';
+
+    header('Content-Type: application/json');
+
+    if (!isset($_SESSION['usuario_tipo']) || $_SESSION['usuario_tipo'] !== 'recepcionista') {
         http_response_code(403);
-        echo 'Não autorizado';
+        echo json_encode(['ok' => false, 'msg' => 'Não autorizado']);
         exit;
     }
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        echo 'Método inválido';
+        http_response_code(405);
+        echo json_encode(['ok' => false, 'msg' => 'Método inválido']);
         exit;
     }
 
@@ -17,28 +26,21 @@
     $processo = trim($_POST['processo'] ?? '');
 
     if (!$ticket || !$medico || !$processo) {
-        echo 'Dados incompletos';
+        echo json_encode(['ok' => false, 'msg' => 'Dados incompletos']);
         exit;
     }
 
-    $caminho  = 'data/marcacao.json';
-    $marcacoes = json_decode(file_get_contents($caminho), true) ?? [];
-    $encontrado = false;
+    $pdo  = db();
+    $stmt = $pdo->prepare("
+        UPDATE marcacoes
+        SET medico = ?, processo = ?, estado = 'Pendente'
+        WHERE ticket = ?
+    ");
+    $stmt->execute([$medico, $processo, $ticket]);
 
-    foreach ($marcacoes as &$m) {
-        if ($m['ticket'] === $ticket) {
-            $m['estado']   = 'Pendente'; // Mantém pendente até médico concluir
-            $m['medico']   = $medico;
-            $m['processo'] = $processo;
-            $encontrado = true;
-            break;
-        }
-    }
-
-    if (!$encontrado) {
-        echo 'Ticket não encontrado';
+    if ($stmt->rowCount() === 0) {
+        echo json_encode(['ok' => false, 'msg' => 'Ticket não encontrado']);
         exit;
     }
 
-    file_put_contents($caminho, json_encode($marcacoes, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-    echo 'ok';
+    echo json_encode(['ok' => true, 'msg' => 'Confirmado']);
