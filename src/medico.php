@@ -78,171 +78,290 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Direção | Vida</title>
+        <title>Direção | Vida Centro de Saúde</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
         <style>
-            * { font-family: 'Inter', sans-serif; }
-            .brand { font-family: 'Playfair Display', serif; }
-            .sidebar { background: linear-gradient(180deg, #0a1f44 0%, #0d2a5e 100%); min-height: 100vh; }
-            @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-            .fade-in { animation: fadeIn .35s ease forwards; }
-            tr:hover td { background: #f8fbff; }
+            :root {
+                --navy: #dde3ed;
+                --navy2: #e8edf5;
+                --card: rgba(255,255,255,0.85);
+                --border: rgba(15,60,120,0.10);
+                --teal: #0fd4c8;
+                --accent: #3b82f6;
+                --gold: #f59e0b;
+                --red: #ef4444;
+                --green: #10b981;
+                --purple: #8b5cf6;
+                --text: #0d1117;
+                --muted: #4a5568;
+            }
+            * { font-family: 'DM Sans', sans-serif; box-sizing: border-box; }
+            body { background: var(--navy); color: var(--text); min-height: 100vh; }
+            .brand-font { font-family: 'DM Serif Display', serif; }
+            .sidebar {
+                background: linear-gradient(180deg, #1a3a6b 0%, #0f2755 100%);
+                border-right: 1px solid var(--border);
+                width: 220px; flex-shrink: 0;
+            }
+            .nav-item {
+                display: flex; align-items: center; gap: 10px;
+                padding: 10px 14px; border-radius: 10px;
+                font-size: 13.5px; font-weight: 500;
+                color: rgba(255,255,255,0.88); transition: all .2s; cursor: pointer;
+                text-decoration: none;
+            }
+            .nav-item:hover { background: rgba(255,255,255,0.12); color: #ffffff; }
+            .nav-item.active { background: rgba(15,212,200,.12); color: var(--teal); }
+            .card {
+                background: #ffffff;
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                backdrop-filter: blur(8px);
+            }
+            .kpi-card {
+                background: #ffffff;
+                border: 1px solid var(--border);
+                border-radius: 14px; padding: 20px 22px;
+                transition: transform .2s, border-color .2s;
+                position: relative; overflow: hidden;
+            }
+            .kpi-card::before {
+                content:''; position:absolute; top:0; left:0; right:0; height:2px;
+            }
+            .kpi-card.c-teal::before { background: linear-gradient(90deg, var(--teal), transparent); }
+            .kpi-card.c-gold::before { background: linear-gradient(90deg, var(--gold), transparent); }
+            .kpi-card.c-purple::before { background: linear-gradient(90deg, var(--purple), transparent); }
+            .kpi-card.c-muted::before { background: linear-gradient(90deg, var(--muted), transparent); }
+            .kpi-card.c-red::before { background: linear-gradient(90deg, var(--red), transparent); }
+            .kpi-card.c-green::before { background: linear-gradient(90deg, var(--green), transparent); }
+            .kpi-card.c-accent::before { background: linear-gradient(90deg, var(--accent), transparent); }
+            .kpi-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.12); }
+
+            .data-table { width: 100%; border-collapse: collapse; }
+            .data-table thead th {
+                padding: 11px 16px; text-align: left;
+                font-size: 11px; font-weight: 600; letter-spacing: .08em;
+                text-transform: uppercase; color: var(--muted);
+                border-bottom: 1px solid var(--border);
+            }
+            .data-table tbody tr { border-bottom: 1px solid rgba(255,255,255,.04); transition: background .15s; }
+            .data-table tbody tr:hover { background: #ffffff; }
+            .data-table tbody td { padding: 13px 16px; font-size: 13.5px; vertical-align: middle; }
+
+            .badge { display:inline-flex; align-items:center; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+            .badge-urgent  { background: rgba(239,68,68,.15);  color: #fca5a5; border:1px solid rgba(239,68,68,.25); }
+            .badge-normal  { background: rgba(107,122,153,.12); color: var(--muted); border:1px solid rgba(107,122,153,.2); }
+            .badge-novo    { background: rgba(16,185,129,.12); color: #6ee7b7; border:1px solid rgba(16,185,129,.2); }
+            .badge-antigo  { background: rgba(107,122,153,.08); color: #9ca3af; border:1px solid rgba(107,122,153,.15); }
+            .badge-pendente { background: rgba(245,158,11,.12); color: #fcd34d; border:1px solid rgba(245,158,11,.2); }
+            .badge-concluido{ background: rgba(16,185,129,.12); color: #6ee7b7; border:1px solid rgba(16,185,129,.2); }
+            .badge-cancelado{ background: rgba(239,68,68,.12);  color: #fca5a5; border:1px solid rgba(239,68,68,.2); }
+
+            .ticket-pill {
+                font-family: monospace; font-size: 11.5px; font-weight: 700;
+                padding: 4px 10px; border-radius: 7px;
+                background: rgba(15,212,200,.1); color: var(--teal);
+                border: 1px solid rgba(15,212,200,.2); letter-spacing:.05em;
+            }
+            .ticket-pill.done { background: rgba(107,122,153,.1); color: var(--muted); border-color: rgba(107,122,153,.2); }
+
+            .btn-concluir {
+                background: linear-gradient(135deg, #10b981, #059669);
+                color: #fff; font-weight: 600; font-size: 12px;
+                padding: 8px 18px; border-radius: 8px; border: none;
+                cursor: pointer; transition: opacity .2s, transform .15s;
+                white-space: nowrap;
+            }
+            .btn-concluir:hover { opacity: .88; transform: translateY(-1px); }
+
+            .topbar {
+                background: rgba(255,255,255,0.92);
+                backdrop-filter: blur(20px);
+                border-bottom: 1px solid var(--border);
+            }
+
+            @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+            .fade-up { animation: fadeUp .35s ease forwards; }
+            @keyframes pulse-dot { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.5);opacity:.6} }
+            .live-dot { width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse-dot 1.6s infinite; }
+
+            ::-webkit-scrollbar { width: 5px; height: 5px; }
+            ::-webkit-scrollbar-track { background: transparent; }
+            ::-webkit-scrollbar-thumb { background: rgba(15,60,120,0.15); border-radius: 10px; }
+
+            .pg-btn {
+                display:inline-flex;align-items:center;justify-content:center;
+                min-width:30px;height:30px;padding:0 8px;border-radius:7px;
+                font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;
+                border: 1px solid var(--border); background: transparent; color: var(--muted);
+            }
+            .pg-btn.active { background: var(--teal); color: #fff; border-color: var(--teal); }
+            .pg-btn:hover:not(.active):not(:disabled) { background: rgba(15,60,120,0.07); color: var(--text); }
+            .pg-btn:disabled { opacity: .3; cursor: not-allowed; }
         </style>
     </head>
-    <body class="bg-gray-50 flex">
+    <body class="flex min-h-screen">
 
     <!-- SIDEBAR -->
-    <aside class="sidebar w-60 flex-shrink-0 hidden md:flex flex-col p-6 sticky top-0 h-screen">
-        <div class="mb-8">
-            <div class="brand text-white text-xl"><span class="text-cyan-400">Vida</span> Centro de Saúde</div>
-            <div class="text-blue-200 text-xs mt-1">Direção Clínica</div>
+    <aside class="sidebar hidden md:flex flex-col p-5 sticky top-0 h-screen">
+        <div class="mb-8 px-2">
+            <div class="brand-font text-2xl text-white"><span style="color:var(--teal)">Vida</span></div>
+            <div style="color:#ffffff;font-size:11px;margin-top:2px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;opacity:0.85;">Centro de Saúde</div>
         </div>
         <nav class="flex-1 space-y-1">
-            <a href="medico.php" class="flex items-center gap-3 bg-white/10 text-white rounded-xl px-4 py-3 text-sm font-medium">Painel</a>
-            <a href="historico.php" class="flex items-center gap-3 text-white/60 hover:text-white hover:bg-white/5 rounded-xl px-4 py-3 text-sm font-medium transition">Histórico Geral</a>
+            <a href="medico.php" class="nav-item active">
+                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                Painel
+            </a>
+            <a href="historico.php" class="nav-item">
+                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                Histórico Geral
+            </a>
         </nav>
-        <div class="border-t border-white/10 pt-4">
-            <p class="text-white/70 text-sm font-medium"><?= htmlspecialchars($_SESSION['usuario_nome']) ?></p>
-            <p class="text-white/30 text-xs">Diretor Clínico</p>
-            <a href="logout.php" class="text-red-300 hover:text-red-200 text-xs mt-2 inline-block transition">→ Terminar Sessão</a>
+        <div style="border-top:1px solid rgba(255,255,255,0.18);padding-top:16px;">
+            <p style="color:#ffffff;font-size:14px;font-weight:600;"><?= htmlspecialchars($_SESSION['usuario_nome']) ?></p>
+            <p style="color:rgba(255,255,255,0.75);font-size:11.5px;margin-top:3px;font-weight:500;letter-spacing:.03em;">Diretor Clínico</p>
+            <a href="logout.php" style="color:#fca5a5;font-size:12.5px;font-weight:600;margin-top:8px;display:inline-block;transition:color .2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#fca5a5'">→ Terminar Sessão</a>
         </div>
     </aside>
 
     <!-- MAIN -->
-    <div class="flex-1 overflow-x-hidden">
-        <header class="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-20">
-            <div>
-                <h1 class="text-xl font-bold text-gray-800">Painel de Direção</h1>
-                <p class="text-sm text-gray-400"><?= date('l, d \d\e F \d\e Y') ?></p>
+    <div class="flex-1 overflow-x-hidden flex flex-col">
+        <header class="topbar px-6 py-4 flex justify-between items-center sticky top-0 z-20">
+            <div class="flex items-center gap-3">
+                <div class="live-dot"></div>
+                <div>
+                    <h1 class="font-semibold text-base" style="color:var(--text)">Painel de Direção Clínica</h1>
+                    <p style="color:var(--muted);font-size:11.5px;"><?= date('l, d \d\e F \d\e Y') ?></p>
+                </div>
             </div>
-            <div class="flex gap-2 items-center">
+            <div class="flex gap-3 items-center">
                 <?php if (isset($_GET['ok'])): ?>
-                <span class="bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full fade-in">Consulta concluída!</span>
+                <span class="badge badge-concluido fade-up">✓ Consulta concluída!</span>
                 <?php endif; ?>
-                <a href="historico.php" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-xl transition font-semibold">Histórico Completo</a>
+                <a href="historico.php" style="background:rgba(15,212,200,.12);color:var(--teal);border:1px solid rgba(15,212,200,.2);padding:7px 16px;border-radius:8px;font-size:12.5px;font-weight:600;text-decoration:none;transition:all .2s;" onmouseover="this.style.background='rgba(15,212,200,.2)'" onmouseout="this.style.background='rgba(15,212,200,.12)'">
+                    Histórico Completo
+                </a>
             </div>
         </header>
 
-        <main class="p-6 space-y-6 fade-in">
+        <main class="p-6 space-y-6 fade-up">
 
-            <!-- KPIs linha 1 -->
+            <!-- KPIs row 1 -->
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <?php foreach ([
-                    [$kpi['hoje'],   'Hoje',        'border-blue-500'],
-                    [$kpi['semana'], 'Esta Semana', 'border-cyan-500'],
-                    [$kpi['mes'],    'Este Mês',    'border-purple-500'],
-                    [$kpi['total'],  'Total Geral', 'border-gray-400'],
+                    [$kpi['hoje'],   'Marcações Hoje',  'c-teal',   'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'],
+                    [$kpi['semana'], 'Esta Semana',     'c-gold',   'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'],
+                    [$kpi['mes'],    'Este Mês',        'c-purple', 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'],
+                    [$kpi['total'],  'Total Geral',     'c-muted',  'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0'],
                 ] as $k): ?>
-                <div class="bg-white rounded-2xl p-5 shadow-sm border-l-4 <?= $k[2] ?>">
-                    <div class="text-3xl font-bold text-gray-800"><?= $k[0] ?></div>
-                    <div class="text-sm text-gray-400"><?= $k[1] ?></div>
+                <div class="kpi-card <?= $k[2] ?>">
+                    <svg style="opacity:.4;margin-bottom:12px" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="<?= $k[3] ?>"/></svg>
+                    <div style="font-size:34px;font-weight:700;color:var(--text);line-height:1;"><?= $k[0] ?></div>
+                    <div style="color:var(--muted);font-size:12px;margin-top:6px;"><?= $k[1] ?></div>
                 </div>
                 <?php endforeach; ?>
             </div>
 
-            <!-- KPIs linha 2 -->
+            <!-- KPIs row 2 -->
             <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
                 <?php foreach ([
-                    [$urgentes_count,      'Urgentes (total)',      'border-red-400'],
-                    [$kpi['novos'],        'Novos Pacientes',       'border-emerald-400'],
-                    [$kpi['concluidos'],   'Consultas Concluídas',  'border-green-400'],
+                    [$urgentes_count,    'Urgentes (total)',    'c-red'],
+                    [$kpi['novos'],      'Novos Pacientes',     'c-green'],
+                    [$kpi['concluidos'], 'Consultas Concluídas','c-accent'],
                 ] as $k): ?>
-                <div class="bg-white rounded-2xl p-5 shadow-sm border-l-4 <?= $k[2] ?>">
-                    <div class="text-2xl font-bold"><?= $k[0] ?></div>
-                    <div class="text-sm text-gray-400"><?= $k[1] ?></div>
+                <div class="kpi-card <?= $k[2] ?>">
+                    <div style="font-size:28px;font-weight:700;color:var(--text);line-height:1;"><?= $k[0] ?></div>
+                    <div style="color:var(--muted);font-size:12px;margin-top:6px;"><?= $k[1] ?></div>
                 </div>
                 <?php endforeach; ?>
             </div>
 
-            <!-- Gráficos -->
+            <!-- Charts -->
             <div class="grid lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                    <h3 class="font-bold text-gray-700 mb-4 text-sm uppercase tracking-wider">Marcações – Últimos 6 Meses</h3>
+                <div class="card p-6 lg:col-span-2">
+                    <h3 style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:20px;">Marcações — Últimos 6 Meses</h3>
                     <canvas id="graficoMensal" height="90"></canvas>
                 </div>
-                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                    <h3 class="font-bold text-gray-700 mb-4 text-sm uppercase tracking-wider">Tipo de Consulta</h3>
+                <div class="card p-6">
+                    <h3 style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:20px;">Tipo de Consulta</h3>
                     <canvas id="graficoPizza" height="140"></canvas>
-                    <div class="flex justify-center gap-6 mt-4 text-xs text-gray-500">
-                        <span><span class="inline-block w-3 h-3 rounded-full bg-blue-600 mr-1"></span>Normal</span>
-                        <span><span class="inline-block w-3 h-3 rounded-full bg-red-400 mr-1"></span>Urgente</span>
+                    <div style="display:flex;justify-content:center;gap:20px;margin-top:16px;">
+                        <span style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#3b82f6;display:inline-block;"></span>Normal</span>
+                        <span style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;"><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block;"></span>Urgente</span>
                     </div>
                 </div>
             </div>
-
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <h3 class="font-bold text-gray-700 mb-4 text-sm uppercase tracking-wider">Fluxo Diário – Última Semana</h3>
-                <canvas id="graficoSemanal" height="70"></canvas>
+            <div class="card p-6">
+                <h3 style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:20px;">Fluxo Diário — Última Semana</h3>
+                <canvas id="graficoSemanal" height="60"></canvas>
             </div>
 
-            <!-- Agenda de hoje -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                    <h3 class="font-bold text-gray-800">Agenda de Hoje — <?= date('d/m/Y') ?></h3>
-                    <span class="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-full font-semibold">
-                        <?= $activos_count ?> activo(s)
-                    </span>
+            <!-- Agenda hoje -->
+            <div class="card overflow-hidden">
+                <div style="padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <h3 style="font-size:15px;font-weight:600;color:var(--text);">Agenda de Hoje</h3>
+                        <p style="color:var(--muted);font-size:12px;margin-top:2px;"><?= date('d/m/Y') ?> · <?= MEDICO_CLINICA ?></p>
+                    </div>
+                    <span class="badge badge-pendente"><?= $activos_count ?> activo(s)</span>
                 </div>
-                <!-- PAGINAÇÃO (topo) -->
-                <div class="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between flex-wrap gap-2">
-                    <span id="infoMedico" class="text-xs text-gray-400"></span>
-                    <div class="flex items-center gap-1" id="botoesMedico"></div>
+                <div style="padding:10px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                    <span id="infoMedico" style="font-size:11.5px;color:var(--muted);"></span>
+                    <div id="botoesMedico" style="display:flex;gap:4px;"></div>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider">
+                <div style="overflow-x:auto;">
+                    <table class="data-table">
+                        <thead>
                             <tr>
-                                <th class="px-5 py-3 text-left">Senha</th>
-                                <th class="px-5 py-3 text-left">Tipo</th>
-                                <th class="px-5 py-3 text-left">Paciente</th>
-                                <th class="px-5 py-3 text-left">Processo</th>
-                                <th class="px-5 py-3 text-left">Estado</th>
-                                <th class="px-5 py-3 text-left">Acção</th>
+                                <th>Senha</th>
+                                <th>Tipo</th>
+                                <th>Paciente</th>
+                                <th>Processo</th>
+                                <th>Estado</th>
+                                <th>Acção</th>
                             </tr>
                         </thead>
-                        <tbody id="tbodyMedico" class="divide-y divide-gray-100">
+                        <tbody id="tbodyMedico">
                         <?php if (empty($hoje_list)): ?>
-                            <tr><td colspan="6" class="px-5 py-10 text-center text-gray-400">Nenhuma marcação para hoje.</td></tr>
+                            <tr><td colspan="6" style="padding:40px;text-align:center;color:var(--muted);">Nenhuma marcação para hoje.</td></tr>
                         <?php else: ?>
                         <?php foreach ($hoje_list as $m):
                             $concluida = in_array($m['estado'], ['Concluido','Cancelado']);
                         ?>
-                        <tr class="transition-colors" <?= $concluida ? 'style="background:#f3f4f6;opacity:0.65;"' : '' ?>>
-                            <td class="px-5 py-3">
-                                <span class="font-mono font-bold <?= $concluida ? 'text-gray-400 bg-gray-200' : 'text-blue-800 bg-blue-50' ?> px-2 py-1 rounded text-xs">
-                                    <?= htmlspecialchars($m['ticket']) ?>
-                                </span>
-                            </td>
-                            <td class="px-5 py-3">
+                        <tr <?= $concluida ? 'style="opacity:0.4;"' : '' ?>>
+                            <td><span class="ticket-pill <?= $concluida ? 'done' : '' ?>"><?= htmlspecialchars($m['ticket']) ?></span></td>
+                            <td>
                                 <?= $m['urgencia'] === 'urgente'
-                                    ? '<span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full">URGENTE</span>'
-                                    : '<span class="bg-gray-100 text-gray-500 text-xs px-2 py-1 rounded-full">Normal</span>' ?>
+                                    ? '<span class="badge badge-urgent">URGENTE</span>'
+                                    : '<span class="badge badge-normal">Normal</span>' ?>
                             </td>
-                            <td class="px-5 py-3">
+                            <td>
                                 <?= $m['cliente'] === 'novo'
-                                    ? '<span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-1 rounded-full">Novo</span>'
-                                    : '<span class="text-gray-500 text-xs">Antigo</span>' ?>
+                                    ? '<span class="badge badge-novo">Novo</span>'
+                                    : '<span class="badge badge-antigo">Antigo</span>' ?>
                             </td>
-                            <td class="px-5 py-3 text-gray-700"><?= htmlspecialchars($m['processo'] ?: '—') ?></td>
-                            <td class="px-5 py-3">
+                            <td style="font-family:monospace;font-size:12px;color:var(--muted);"><?= htmlspecialchars($m['processo'] ?: '—') ?></td>
+                            <td>
                                 <?php
-                                $ecfg = ['Pendente'=>'bg-amber-100 text-amber-700','Concluido'=>'bg-green-100 text-green-700','Cancelado'=>'bg-red-100 text-red-600'];
-                                $cls = $ecfg[$m['estado']] ?? 'bg-gray-100 text-gray-500';
-                                echo "<span class='$cls text-xs px-2 py-1 rounded-full font-medium'>{$m['estado']}</span>";
+                                $badge_map = ['Pendente'=>'badge-pendente','Concluido'=>'badge-concluido','Cancelado'=>'badge-cancelado'];
+                                $label_map = ['Pendente'=>'Pendente','Concluido'=>'Concluído','Cancelado'=>'Cancelado'];
+                                $bcls = $badge_map[$m['estado']] ?? 'badge-normal';
+                                $blbl = $label_map[$m['estado']] ?? $m['estado'];
+                                echo "<span class='badge $bcls'>$blbl</span>";
                                 ?>
                             </td>
-                            <td class="px-5 py-3">
+                            <td>
                                 <?php if ($concluida): ?>
-                                    <span class="text-xs text-gray-400 italic">—</span>
+                                    <span style="color:var(--muted);font-size:12px;">—</span>
                                 <?php else: ?>
                                     <form method="POST" style="display:inline">
                                         <input type="hidden" name="concluir_ticket" value="<?= htmlspecialchars($m['ticket']) ?>">
-                                        <button type="submit"
-                                            onclick="return confirm('Concluir consulta <?= htmlspecialchars($m['ticket']) ?>?')"
-                                            class="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-4 py-2 rounded-lg transition">
-                                            Concluir Consulta
+                                        <button type="submit" class="btn-concluir"
+                                            onclick="return confirm('Concluir consulta <?= htmlspecialchars($m['ticket']) ?>?')">
+                                            ✓ Concluir
                                         </button>
                                     </form>
                                 <?php endif; ?>
@@ -259,11 +378,44 @@
     </div>
 
     <script>
-        new Chart(document.getElementById('graficoMensal'),{type:'bar',data:{labels:<?= json_encode($meses_labels) ?>,datasets:[{data:<?= json_encode($meses_vals) ?>,backgroundColor:'rgba(21,101,192,0.15)',borderColor:'#1565c0',borderWidth:2,borderRadius:8}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
-        new Chart(document.getElementById('graficoPizza'),{type:'doughnut',data:{labels:['Normal','Urgente'],datasets:[{data:[<?= $normais_count ?>,<?= $urgentes_count ?>],backgroundColor:['#1565c0','#ef4444'],borderWidth:0}]},options:{plugins:{legend:{display:false}},cutout:'65%'}});
-        new Chart(document.getElementById('graficoSemanal'),{type:'line',data:{labels:<?= json_encode($dias_labels) ?>,datasets:[{data:<?= json_encode($dias_vals) ?>,borderColor:'#00b4d8',backgroundColor:'rgba(0,180,216,0.08)',fill:true,tension:0.4,pointBackgroundColor:'#00b4d8',pointRadius:5}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+        const chartOpts = {
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero:true, ticks:{ stepSize:1, color:'#6b7a99', font:{size:11} }, grid:{color:'rgba(255,255,255,.05)'}, border:{color:'transparent'} },
+                x: { ticks:{ color:'#6b7a99', font:{size:11} }, grid:{display:false}, border:{color:'rgba(255,255,255,.05)'} }
+            }
+        };
+        new Chart(document.getElementById('graficoMensal'), {
+            type:'bar', data:{ labels:<?= json_encode($meses_labels) ?>, datasets:[{ data:<?= json_encode($meses_vals) ?>, backgroundColor:'rgba(59,130,246,.15)', borderColor:'#3b82f6', borderWidth:2, borderRadius:8 }] },
+            options: chartOpts
+        });
+        new Chart(document.getElementById('graficoPizza'), {
+            type:'doughnut', data:{ labels:['Normal','Urgente'], datasets:[{ data:[<?= $normais_count ?>,<?= $urgentes_count ?>], backgroundColor:['#3b82f6','#ef4444'], borderWidth:0, hoverOffset:4 }] },
+            options:{ plugins:{legend:{display:false}}, cutout:'65%' }
+        });
+        new Chart(document.getElementById('graficoSemanal'), {
+            type:'line', data:{ labels:<?= json_encode($dias_labels) ?>, datasets:[{ data:<?= json_encode($dias_vals) ?>, borderColor:'#0fd4c8', backgroundColor:'rgba(15,212,200,.08)', fill:true, tension:0.4, pointBackgroundColor:'#0fd4c8', pointRadius:4 }] },
+            options: chartOpts
+        });
 
-        (function(){const PER=10,tbody=document.getElementById('tbodyMedico'),info=document.getElementById('infoMedico'),btns=document.getElementById('botoesMedico');const rows=Array.from(tbody.querySelectorAll('tr'));let pg=1;function tp(){return Math.max(1,Math.ceil(rows.length/PER));}function render(){const s=(pg-1)*PER,e=s+PER;rows.forEach((r,i)=>r.style.display=(i>=s&&i<e)?'':'none');info.textContent=rows.length===0?'Sem registos':`A mostrar ${Math.min(s+1,rows.length)}–${Math.min(e,rows.length)} de ${rows.length}`;btns.innerHTML='';const st=a=>`display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 8px;border-radius:8px;font-size:13px;font-weight:600;border:1.5px solid ${a?'#1565c0':'#e5e7eb'};background:${a?'#1565c0':'#fff'};color:${a?'#fff':'#374151'};cursor:pointer;`;const add=(l,p,d)=>{const b=document.createElement('button');b.innerHTML=l;b.style.cssText=st(p===pg);b.disabled=d;if(d)b.style.opacity='.35';b.onclick=()=>{if(!d){pg=p;render();}};btns.appendChild(b);};add('&laquo;',1,pg===1);add('&lsaquo;',pg-1,pg===1);let s2=Math.max(1,pg-2),e2=Math.min(tp(),s2+4);s2=Math.max(1,e2-4);for(let p=s2;p<=e2;p++)add(p,p,false);add('&rsaquo;',pg+1,pg===tp());add('&raquo;',tp(),pg===tp());}render();})();
+        (function(){
+            const PER=10, tbody=document.getElementById('tbodyMedico'),
+                info=document.getElementById('infoMedico'), btns=document.getElementById('botoesMedico');
+            const rows=Array.from(tbody.querySelectorAll('tr')); let pg=1;
+            function tp(){ return Math.max(1,Math.ceil(rows.length/PER)); }
+            function render(){
+                const s=(pg-1)*PER,e=s+PER;
+                rows.forEach((r,i)=>r.style.display=(i>=s&&i<e)?'':' none');
+                info.textContent=rows.length===0?'Sem registos':`A mostrar ${Math.min(s+1,rows.length)}–${Math.min(e,rows.length)} de ${rows.length}`;
+                btns.innerHTML='';
+                const add=(l,p,d)=>{const b=document.createElement('button');b.innerHTML=l;b.className='pg-btn'+(p===pg?' active':'');b.disabled=d;b.onclick=()=>{if(!d){pg=p;render();}};btns.appendChild(b);};
+                add('&laquo;',1,pg===1);add('&lsaquo;',pg-1,pg===1);
+                let s2=Math.max(1,pg-2),e2=Math.min(tp(),s2+4);s2=Math.max(1,e2-4);
+                for(let p=s2;p<=e2;p++)add(p,p,false);
+                add('&rsaquo;',pg+1,pg===tp());add('&raquo;',tp(),pg===tp());
+            }
+            render();
+        })();
     </script>
     </body>
 </html>

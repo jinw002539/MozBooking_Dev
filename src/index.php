@@ -1,4 +1,7 @@
 <?php
+    // Fuso horário de Moçambique (UTC+2) — deve ser a primeira instrução
+    date_default_timezone_set('Africa/Maputo');
+
     session_start();
     $mostrarModal = false;
     $ticketGerado = "";
@@ -75,45 +78,56 @@
     $outro_lang = $lang == 'pt' ? 'en' : 'pt';
     $outro_lang_label = $lang == 'pt' ? 'English' : 'Português';
 
-    // Gerar datas disponíveis (15 dias a partir de amanhã)
-    $datas_disponiveis = [];
-    for ($i = 1; $i <= 15; $i++) {
-        $data = date('Y-m-d', strtotime("+$i days"));
-        $dia_semana = date('N', strtotime($data)); // 6=sab, 7=dom
-        if ($dia_semana < 6) { // Sem fins de semana
-            $datas_disponiveis[] = $data;
+    // Datas geradas no browser via JavaScript (usa o relógio local do dispositivo)
+    $datas_disponiveis = []; // preenchido pelo JS
+
+    // Ler notificação de cancelamento via base de dados
+    $notificacao = null;
+    try {
+        require_once __DIR__ . '/db.php';
+        $notif_row = db()->query("SELECT * FROM notificacoes ORDER BY id DESC LIMIT 1")->fetch();
+        if ($notif_row && $notif_row['ativa']) {
+            $notificacao = $notif_row;
         }
+    } catch (Exception $e) {
+        // BD indisponível — ignora notificação
     }
 
-    // Ler notificação de cancelamento
-    $notif_path = 'data/notificacao.json';
-    $notificacao = null;
-    if (file_exists($notif_path)) {
-        $notif_data = json_decode(file_get_contents($notif_path), true);
-        if ($notif_data && $notif_data['ativa']) {
-            $notificacao = $notif_data;
-        }
+    // Hora local via cookie (definido pelo JS no browser)
+    $hora_local = 0;
+    if (isset($_COOKIE['local_date'])) {
+        // Usar hora do servidor mas com timezone correcto já definido
+        $hora_local = (int)date('H');
     }
+
+    $fora_de_horas = ($hora_local >= 16); // após as 16h não aceitar marcações
 
     if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-        $caminho = 'data/marcacao.json';
-        $marcacoes = json_decode(file_get_contents($caminho), true) ?? [];
-        $ticketGerado = "V-" . strtoupper(substr(md5(uniqid(rand(), true)), 0, 6));
+        require_once __DIR__ . '/db.php';
 
-        $nova = [
-            "ticket"  => $ticketGerado,
-            "data"    => $_POST['data_consulta'],
-            "cliente" => $_POST['cliente_novo'],
-            "urgencia"=> $_POST['urgencia'],
-            "estado"  => "Pendente",
-            "medico"  => "",
-            "processo"=> "",
-            "criado_em" => date('Y-m-d H:i:s')
-        ];
+        // Validação server-side: verificar hora limite
+        $hora_servidor = (int)date('H');
+        $data_escolhida = $_POST['data_consulta'] ?? '';
+        $hoje_servidor  = date('Y-m-d');
 
-        $marcacoes[] = $nova;
-        file_put_contents($caminho, json_encode($marcacoes, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
-        $mostrarModal = true;
+        // Se a data escolhida for hoje E já passou das 16h → rejeitar
+        if ($data_escolhida === $hoje_servidor && $hora_servidor >= 16) {
+            $fora_de_horas = true;
+        } else {
+            $ticketGerado = 'V-' . strtoupper(substr(md5(uniqid(rand(), true)), 0, 6));
+
+            db()->prepare("
+                INSERT INTO marcacoes (ticket, data, cliente, urgencia, estado, medico, processo, criado_em)
+                VALUES (?, ?, ?, ?, 'Pendente', '', '', NOW())
+            ")->execute([
+                $ticketGerado,
+                $data_escolhida,
+                $_POST['cliente_novo'],
+                $_POST['urgencia'],
+            ]);
+
+            $mostrarModal = true;
+        }
     }
 ?>
 <!DOCTYPE html>
@@ -135,7 +149,7 @@
             h1, h2, .brand { font-family: 'Playfair Display', serif; }
             .hero-bg {
                 background: linear-gradient(135deg, rgba(10,31,68,0.92) 0%, rgba(21,101,192,0.85) 100%),
-                            url('https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=1600&q=80') center/cover no-repeat;
+                            url('https://images.unsplash.com/photo-1551601651-2a8555f1a136?w=1600&q=80') center/cover no-repeat;
             }
             .card-hover { transition: transform 0.25s, box-shadow 0.25s; }
             .card-hover:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(10,31,68,0.15); }
@@ -149,7 +163,8 @@
             @keyframes pulse-ring { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.1);opacity:0.7} }
             .notif-pulse { animation: pulse-ring 2s infinite; }
         </style>
-    </head>
+        <script src="js/localdate.js"></script>
+</head>
     <body class="bg-gray-50">
 
     <?php if ($notificacao): ?>
@@ -215,30 +230,167 @@
     </div>
 
     <!-- SERVIÇOS -->
-    <section id="servicos" class="py-24 px-6">
+    <section id="servicos" class="py-24 px-6" style="background:#f8faff;">
         <div class="max-w-6xl mx-auto">
+
+            <!-- Header -->
             <div class="text-center mb-16">
-                <h2 class="text-4xl font-bold text-navy-900 mb-4" style="color:#0a1f44"><?= $t['servicos'] ?></h2>
-                <p class="text-gray-500 text-lg"><?= $lang == 'pt' ? 'Cuidados completos para toda a família' : 'Complete care for the whole family' ?></p>
+                <span style="background:rgba(21,101,192,0.08);color:#1565c0;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:6px 18px;border-radius:20px;display:inline-block;margin-bottom:14px;">
+                    <?= $lang=='pt' ? 'O que oferecemos' : 'What we offer' ?>
+                </span>
+                <h2 class="text-4xl font-bold mb-4" style="color:#0a1f44"><?= $t['servicos'] ?></h2>
+                <p class="text-gray-500 text-lg max-w-xl mx-auto"><?= $lang=='pt' ? 'Cuidados completos para toda a família, com tecnologia moderna e atenção humana.' : 'Complete care for the whole family, with modern technology and human attention.' ?></p>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-                <?php
-                $icons = ['','','','','',''];
-                $servs = [
-                    [$t['serv1_t'],$t['serv1_d']],[$t['serv2_t'],$t['serv2_d']],
-                    [$t['serv3_t'],$t['serv3_d']],[$t['serv4_t'],$t['serv4_d']],
-                    [$t['serv5_t'],$t['serv5_d']],[$t['serv6_t'],$t['serv6_d']]
-                ];
-                foreach($servs as $i => $s): ?>
-                <div class="card-hover bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
-                    <div class="text-4xl mb-4"><?= $icons[$i] ?></div>
-                    <h3 class="text-xl font-bold mb-2" style="color:#0a1f44"><?= $s[0] ?></h3>
-                    <p class="text-gray-500 text-sm leading-relaxed"><?= $s[1] ?></p>
+
+            <?php
+            $servicos_data = [
+                [
+                    'titulo'       => $t['serv1_t'],
+                    'desc'         => $t['serv1_d'],
+                    'detalhe'      => $lang=='pt' ? 'Registo da actividade eléctrica do coração em repouso. Essencial para rastrear arritmias, isquemia e outras condições cardíacas.' : 'Records the electrical activity of the heart at rest. Essential for detecting arrhythmias, ischaemia and other cardiac conditions.',
+                    'disponivel'   => $lang=='pt' ? 'Seg – Sex' : 'Mon – Fri',
+                    'duracao'      => '20 min',
+                    'cor'          => '#e8f0fe',
+                    'cor_icon'     => '#1565c0',
+                    'svg'          => '<path stroke-linecap="round" stroke-linejoin="round" d="M3 12h3l2-7 4 14 3-7h6"/>',
+                ],
+                [
+                    'titulo'       => $t['serv2_t'],
+                    'desc'         => $t['serv2_d'],
+                    'detalhe'      => $lang=='pt' ? 'Ecografia abdominal, pélvica e obstétrica com equipamento de alta resolução. Resultados entregues na hora.' : 'Abdominal, pelvic and obstetric ultrasound with high-resolution equipment. Results delivered immediately.',
+                    'disponivel'   => $lang=='pt' ? 'Seg – Sex' : 'Mon – Fri',
+                    'duracao'      => '30 min',
+                    'cor'          => '#e0f7fa',
+                    'cor_icon'     => '#00838f',
+                    'svg'          => '<circle cx="11" cy="11" r="8"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M11 8v6M8 11h6"/>',
+                ],
+                [
+                    'titulo'       => $t['serv3_t'],
+                    'desc'         => $t['serv3_d'],
+                    'detalhe'      => $lang=='pt' ? 'Avaliação clínica geral, acompanhamento de doenças crónicas, emissão de receitas e certificados médicos.' : 'General clinical assessment, chronic disease follow-up, prescriptions and medical certificates.',
+                    'disponivel'   => $lang=='pt' ? 'Seg – Sáb' : 'Mon – Sat',
+                    'duracao'      => '30 min',
+                    'cor'          => '#f3e8ff',
+                    'cor_icon'     => '#7c3aed',
+                    'svg'          => '<path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>',
+                ],
+                [
+                    'titulo'       => $t['serv4_t'],
+                    'desc'         => $t['serv4_d'],
+                    'detalhe'      => $lang=='pt' ? 'Consultas pediátricas desde o recém-nascido até à adolescência. Vacinação, desenvolvimento e acompanhamento nutricional.' : 'Paediatric consultations from newborns to adolescents. Vaccination, development and nutritional follow-up.',
+                    'disponivel'   => $lang=='pt' ? 'Ter, Qui, Sáb' : 'Tue, Thu, Sat',
+                    'duracao'      => '30 min',
+                    'cor'          => '#fef3c7',
+                    'cor_icon'     => '#d97706',
+                    'svg'          => '<path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364l-7.682-7.682a4.5 4.5 0 010-6.364z"/>',
+                ],
+                [
+                    'titulo'       => $t['serv5_t'],
+                    'desc'         => $t['serv5_d'],
+                    'detalhe'      => $lang=='pt' ? 'Triagem e atendimento prioritário fora do horário normal. Disponível das 7h–9h e após as 16h, com taxa adicional.' : 'Triage and priority care outside normal hours. Available 7–9 AM and after 4 PM, with additional fee.',
+                    'disponivel'   => $lang=='pt' ? 'Todos os dias' : 'Every day',
+                    'duracao'      => $lang=='pt' ? 'Imediato' : 'Immediate',
+                    'cor'          => '#fee2e2',
+                    'cor_icon'     => '#dc2626',
+                    'svg'          => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>',
+                ],
+                [
+                    'titulo'       => $t['serv6_t'],
+                    'desc'         => $t['serv6_d'],
+                    'detalhe'      => $lang=='pt' ? 'Hemograma completo, glicémia, perfil lipídico, função renal e hepática, entre outros. Resultados em 1–2 horas.' : 'Full blood count, blood glucose, lipid profile, renal and hepatic function, and more. Results in 1–2 hours.',
+                    'disponivel'   => $lang=='pt' ? 'Seg – Sáb, 7h–12h' : 'Mon – Sat, 7–12 AM',
+                    'duracao'      => '1–2 h',
+                    'cor'          => '#dcfce7',
+                    'cor_icon'     => '#16a34a',
+                    'svg'          => '<path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>',
+                ],
+            ];
+            ?>
+
+            <!-- Grid de serviços -->
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;" class="serv-grid">
+            <?php foreach ($servicos_data as $i => $sv): ?>
+                <div class="serv-card card-hover" style="
+                    background:#ffffff;
+                    border:1px solid #e8edf5;
+                    border-radius:20px;
+                    overflow:hidden;
+                    display:flex;flex-direction:column;
+                    box-shadow:0 2px 12px rgba(10,31,68,0.06);
+                    transition:transform .25s, box-shadow .25s;
+                ">
+                    <!-- Barra de cor no topo -->
+                    <div style="height:4px;background:<?= $sv['cor_icon'] ?>;"></div>
+
+                    <div style="padding:28px 28px 20px;">
+                        <!-- Ícone + Título -->
+                        <div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:16px;">
+                            <div style="
+                                width:48px;height:48px;border-radius:14px;
+                                background:<?= $sv['cor'] ?>;
+                                display:flex;align-items:center;justify-content:center;
+                                flex-shrink:0;
+                            ">
+                                <svg width="22" height="22" fill="none" stroke="<?= $sv['cor_icon'] ?>" stroke-width="2" viewBox="0 0 24 24">
+                                    <?= $sv['svg'] ?>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 style="font-size:17px;font-weight:700;color:#0a1f44;margin:0 0 4px;"><?= $sv['titulo'] ?></h3>
+                                <p style="font-size:13px;color:#6b7a99;margin:0;"><?= $sv['desc'] ?></p>
+                            </div>
+                        </div>
+
+                        <!-- Detalhe -->
+                        <p style="font-size:13px;color:#4a5568;line-height:1.65;margin-bottom:20px;padding-top:12px;border-top:1px solid #f0f4f8;">
+                            <?= $sv['detalhe'] ?>
+                        </p>
+
+                        <!-- Tags de disponibilidade + duração -->
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+                            <span style="
+                                display:inline-flex;align-items:center;gap:5px;
+                                background:<?= $sv['cor'] ?>;color:<?= $sv['cor_icon'] ?>;
+                                font-size:11.5px;font-weight:600;padding:4px 11px;border-radius:20px;
+                            ">
+                                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                                <?= $sv['disponivel'] ?>
+                            </span>
+                            <span style="
+                                display:inline-flex;align-items:center;gap:5px;
+                                background:#f0f4f8;color:#4a5568;
+                                font-size:11.5px;font-weight:600;padding:4px 11px;border-radius:20px;
+                            ">
+                                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 6v6l4 2"/></svg>
+                                <?= $sv['duracao'] ?>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- CTA -->
+                    <div style="margin-top:auto;padding:0 28px 24px;">
+                        <a href="#marcar" style="
+                            display:block;text-align:center;
+                            background:<?= $sv['cor'] ?>;color:<?= $sv['cor_icon'] ?>;
+                            font-size:13px;font-weight:700;
+                            padding:10px;border-radius:10px;
+                            text-decoration:none;
+                            transition:filter .2s;
+                        " onmouseover="this.style.filter='brightness(0.93)'" onmouseout="this.style.filter='none'">
+                            <?= $lang=='pt' ? 'Marcar consulta →' : 'Book now →' ?>
+                        </a>
+                    </div>
                 </div>
-                <?php endforeach; ?>
+            <?php endforeach; ?>
             </div>
+
         </div>
     </section>
+
+    <style>
+        @media(max-width:900px){ .serv-grid{ grid-template-columns:repeat(2,1fr) !important; } }
+        @media(max-width:580px){ .serv-grid{ grid-template-columns:1fr !important; } }
+    </style>
 
     <!-- SOBRE NÓS -->
     <section id="sobre" class="py-20 px-6" style="background:var(--light)">
@@ -261,9 +413,15 @@
                     </div>
                 </div>
             </div>
-            <div class="rounded-3xl overflow-hidden shadow-2xl">
-                <img src="https://images.unsplash.com/photo-1631217868264-e5b90bb7e133?w=800&q=80"
-                    alt="Clínica" class="w-full h-72 object-cover">
+            <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-2xl overflow-hidden shadow-xl">
+                    <img src="https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=600&q=80"
+                        alt="Médico" class="w-full h-52 object-cover object-top">
+                </div>
+                <div class="rounded-2xl overflow-hidden shadow-xl mt-6">
+                    <img src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=600&q=80"
+                        alt="Equipa" class="w-full h-52 object-cover object-top">
+                </div>
             </div>
         </div>
     </section>
@@ -289,18 +447,18 @@
                     <!-- Data -->
                     <div class="mb-5">
                         <label class="block text-sm font-semibold text-gray-700 mb-2"><?= $t['data_label'] ?></label>
-                        <select name="data_consulta" required class="form-input w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-700 focus:outline-none transition">
+                        <select id="sel-data" name="data_consulta" required class="form-input w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-700 focus:outline-none transition">
                             <option value=""><?= $lang == 'pt' ? '— Escolha uma data —' : '— Choose a date —' ?></option>
-                            <?php foreach($datas_disponiveis as $d):
-                                $label_pt = date('d/m/Y', strtotime($d)) . ' (' . ['','Seg','Ter','Qua','Qui','Sex','Sáb','Dom'][date('N',strtotime($d))] . ')';
-                                $label_en = date('d/m/Y', strtotime($d)) . ' (' . ['','Mon','Tue','Wed','Thu','Fri','Sat','Sun'][date('N',strtotime($d))] . ')';
-                            ?>
-                                <option value="<?= $d ?>"><?= $lang == 'pt' ? $label_pt : $label_en ?></option>
-                            <?php endforeach; ?>
                         </select>
                         <p class="text-xs text-gray-400 mt-1">
-                            <?= $lang == 'pt' ? ' Apenas dias úteis disponíveis (próximos 15 dias)' : ' Weekdays only (next 15 days)' ?>
+                            <?= $lang == 'pt' ? 'Apenas dias úteis. Marcações até às 16h.' : 'Weekdays only. Bookings accepted until 4 PM.' ?>
                         </p>
+                        <!-- Aviso após as 16h — mostrado pelo JS -->
+                        <div id="aviso-hora" style="display:none" class="mt-2 bg-amber-50 border border-amber-300 text-amber-700 rounded-xl px-4 py-3 text-sm font-medium">
+                            <?= $lang == 'pt'
+                                ? 'O horário de marcações terminou às 16h. A primeira data disponível é amanhã.'
+                                : 'Booking hours ended at 4 PM. The first available date is tomorrow.' ?>
+                        </div>
                     </div>
 
                     <!-- Tipo consulta -->
@@ -385,5 +543,65 @@
     </div>
     <?php endif; ?>
 
+
+    <script>
+    // Gera datas usando o relógio LOCAL do browser — independente do servidor
+    (function() {
+        const lang    = <?= json_encode($lang) ?>;
+        const isPt    = (lang === 'pt');
+        const dias_pt = ['','Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+        const dias_en = ['','Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+        const sel     = document.getElementById('sel-data');
+        const aviso   = document.getElementById('aviso-hora');
+        if (!sel) return;
+
+        const agora      = new Date();
+        const hora        = agora.getHours(); // hora local do browser
+        const HORA_LIMITE = 16;               // após as 16h não se aceitam marcações para hoje
+        const passouLimite = hora >= HORA_LIMITE;
+
+        // Se já passou das 16h, começa a partir de amanhã; caso contrário começa hoje
+        // Hoje só aparece se for dia útil (Seg-Sex) e antes das 16h
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+
+        // Mostrar aviso se passou das 16h
+        if (passouLimite && aviso) {
+            aviso.style.display = 'block';
+        }
+
+        let adicionados = 0;
+        let offset      = passouLimite ? 1 : 0; // 0 = hoje, 1 = amanhã
+
+        while (adicionados < 15) {
+            const d = new Date(hoje);
+            d.setDate(hoje.getDate() + offset);
+            const diaSemana = d.getDay(); // 0=Dom, 6=Sáb
+
+            if (diaSemana !== 0 && diaSemana !== 6) { // só dias úteis
+                const yyyy = d.getFullYear();
+                const mm   = String(d.getMonth() + 1).padStart(2, '0');
+                const dd   = String(d.getDate()).padStart(2, '0');
+                const val  = `${yyyy}-${mm}-${dd}`;
+
+                const nIdx   = diaSemana === 0 ? 7 : diaSemana;
+                const nomeDia = isPt ? dias_pt[nIdx] : dias_en[nIdx];
+
+                // Etiqueta: se for hoje, indicar
+                let label = `${dd}/${mm}/${yyyy} (${nomeDia})`;
+                if (offset === 0) {
+                    label += isPt ? ' — Hoje' : ' — Today';
+                }
+
+                const opt = document.createElement('option');
+                opt.value = val;
+                opt.textContent = label;
+                sel.appendChild(opt);
+                adicionados++;
+            }
+            offset++;
+        }
+    })();
+    </script>
     </body>
 </html>
