@@ -204,6 +204,16 @@
                 background: rgba(107,122,153,.1); color: var(--muted);
                 border-color: rgba(107,122,153,.2);
             }
+            /* linhas concluídas/canceladas — fundo colorido subtil, sem opacity baixa */
+            tr.tr-concluido { background: rgba(16,185,129,0.07); }
+            tr.tr-cancelado { background: rgba(239,68,68,0.07); }
+            /* linha pendente com médico atribuído (à espera do médico interno) */
+            tr.tr-aguarda   { background: rgba(245,158,11,0.06); }
+            /* label de estado bloqueado */
+            .estado-lock {
+                display:inline-flex; align-items:center; gap:5px;
+                font-size:12px; font-weight:600; color: var(--muted);
+            }
             
             /* Form controls */
             select, input[type=text] {
@@ -359,7 +369,7 @@
                 </div>
                 <div class="card p-6">
                     <h3 style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:20px;">Notificação de Cancelamento</h3>
-                    <form method="POST" class="notif-form">
+                    <form method="POST" class="notif-form" data-notif>
                         <input type="hidden" name="action" value="notificar">
                         <div style="margin-bottom:12px;">
                             <label style="display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;letter-spacing:.04em;text-transform:uppercase;">Mensagem (PT)</label>
@@ -412,17 +422,33 @@
                             <tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted);">Nenhuma marcação para hoje.</td></tr>
                         <?php else: ?>
                         <?php foreach ($marcacoes_hoje as $m):
-                            $med_saved = $m['medico'] ?? '';
-                            $concluida = in_array($m['estado'], ['Concluido', 'Cancelado']);
-                            $estado_safe = $m['estado'] === 'Em atendimento' ? 'Pendente' : $m['estado'];
-                        ?>
-                        <tr data-ticket="<?= htmlspecialchars($m['ticket']) ?>"
-                            <?= $concluida ? 'style="opacity:0.45;"' : '' ?>>
-                            <form method="POST" class="contents">
-                            <input type="hidden" name="action"  value="update">
-                            <input type="hidden" name="ticket"  value="<?= htmlspecialchars($m['ticket']) ?>">
+                            $med_saved   = $m['medico'] ?? '';
+                            $estado_real = $m['estado'];
+                            // Situação A: terminada (Concluido ou Cancelado) — linha fechada
+                            $terminada   = in_array($estado_real, ['Concluido','Cancelado']);
+                            // Situação B: médico interno atribuído e pendente — aguarda médico
+                            $aguarda_int = !$terminada
+                                           && !empty($med_saved)
+                                           && is_medico_clinica($med_saved)
+                                           && in_array($estado_real, ['Pendente','Em atendimento']);
+                            // Situação C: médico externo — recepcionista pode editar até concluir
+                            $ext_editavel = !$terminada
+                                            && !empty($med_saved)
+                                            && is_medico_externo($med_saved);
+                            // Situação D: ainda sem médico — recepcionista atribui
+                            $por_atribuir = !$terminada && !$aguarda_int && !$ext_editavel;
 
-                            <td><span class="ticket-pill <?= $concluida ? 'done' : '' ?>"><?= htmlspecialchars($m['ticket']) ?></span></td>
+                            $estado_safe = $estado_real === 'Em atendimento' ? 'Pendente' : $estado_real;
+
+                            // classe CSS da linha
+                            if ($terminada && $estado_real === 'Concluido') $tr_class = 'tr-concluido';
+                            elseif ($terminada && $estado_real === 'Cancelado') $tr_class = 'tr-cancelado';
+                            elseif ($aguarda_int) $tr_class = 'tr-aguarda';
+                            else $tr_class = '';
+                        ?>
+                        <tr class="<?= $tr_class ?>" data-ticket="<?= htmlspecialchars($m['ticket']) ?>">
+
+                            <td><span class="ticket-pill <?= $terminada ? 'done' : '' ?>"><?= htmlspecialchars($m['ticket']) ?></span></td>
                             <td>
                                 <?= $m['urgencia'] === 'urgente'
                                     ? '<span class="badge badge-urgent">URGENTE</span>'
@@ -433,9 +459,14 @@
                                     ? '<span class="badge badge-novo">Novo</span>'
                                     : '<span class="badge badge-antigo">Antigo</span>' ?>
                             </td>
+
+                            <!-- MÉDICO -->
                             <td>
-                                <?php if ($concluida): ?>
-                                    <span style="color:var(--muted);font-size:12.5px;"><?= htmlspecialchars($med_saved ?: '—') ?></span>
+                                <?php if ($terminada || $aguarda_int): ?>
+                                    <span style="font-size:12.5px;font-weight:500;color:var(--text);"><?= htmlspecialchars($med_saved ?: '—') ?></span>
+                                    <?php if ($aguarda_int): ?>
+                                    <br><small style="color:var(--muted);font-size:10.5px;">A aguardar médico</small>
+                                    <?php endif; ?>
                                 <?php else: ?>
                                     <select name="medico" class="sel-medico" style="min-width:170px;"
                                             data-saved="<?= htmlspecialchars($med_saved) ?>">
@@ -448,12 +479,14 @@
                                     </select>
                                 <?php endif; ?>
                             </td>
+
+                            <!-- PROCESSO -->
                             <td>
-                                <?php if ($concluida): ?>
-                                    <span style="color:var(--muted);font-size:12.5px;"><?= htmlspecialchars($m['processo'] ?: '—') ?></span>
+                                <?php if ($terminada || $aguarda_int): ?>
+                                    <span style="font-family:monospace;font-size:12px;"><?= htmlspecialchars($m['processo'] ?: '—') ?></span>
                                 <?php elseif (!empty($m['processo'])): ?>
-                                    <input type="hidden" name="processo" value="<?= htmlspecialchars($m['processo']) ?>">
                                     <span style="font-family:monospace;font-size:12px;padding:3px 8px;background:rgba(15,60,120,0.06);border-radius:6px;color:var(--text);"><?= htmlspecialchars($m['processo']) ?></span>
+                                    <!-- processo já atribuído, passa via JS do data-proc -->
                                 <?php elseif ($m['cliente'] === 'novo'): ?>
                                     <select name="processo" style="min-width:130px;border-color:rgba(245,158,11,.4);">
                                         <option value="">— Atribuir nº —</option>
@@ -469,28 +502,39 @@
                                         <?php endforeach; ?>
                                     </select>
                                 <?php endif; ?>
+                                <!-- guarda o processo já existente para o JS usar -->
+                                <span class="d-none" data-proc="<?= htmlspecialchars($m['processo'] ?? '') ?>" style="display:none"></span>
                             </td>
+
+                            <!-- ESTADO -->
                             <td>
-                                <?php if ($concluida): ?>
+                                <?php if ($terminada): ?>
                                     <?php
-                                    $ebadge = $m['estado'] === 'Concluido' ? 'badge-concluido' : 'badge-cancelado';
-                                    $elabel = $m['estado'] === 'Concluido' ? 'Concluído' : 'Cancelado';
+                                    $ebadge = $estado_real === 'Concluido' ? 'badge-concluido' : 'badge-cancelado';
+                                    $elabel = $estado_real === 'Concluido' ? 'Concluído' : 'Cancelado';
                                     echo "<span class='badge $ebadge'>$elabel</span>";
                                     ?>
+                                <?php elseif ($aguarda_int): ?>
+                                    <span class="badge badge-pendente">Pendente</span>
                                 <?php else: ?>
                                     <select name="estado" class="sel-estado"
                                             data-saved-estado="<?= htmlspecialchars($estado_safe) ?>">
                                     </select>
                                 <?php endif; ?>
                             </td>
+
+                            <!-- ACÇÃO -->
                             <td>
-                                <?php if ($concluida): ?>
-                                    <span style="color:var(--muted);font-size:12px;">—</span>
+                                <?php if ($terminada || $aguarda_int): ?>
+                                    <span style="color:var(--muted);font-size:11.5px;">
+                                        <?= $aguarda_int ? '🔒 Bloqueado' : '✓ Fechado' ?>
+                                    </span>
                                 <?php else: ?>
-                                    <button type="submit" class="btn-acao"></button>
+                                    <button type="button" class="btn-acao"
+                                            onclick="submeterLinha(this)"></button>
                                 <?php endif; ?>
                             </td>
-                            </form>
+
                         </tr>
                         <?php endforeach; ?>
                         <?php endif; ?>
@@ -532,30 +576,67 @@
             if (o) o.style.display = show ? 'flex' : 'none';
         }
 
-        function ajaxSubmit(form) {
+        // ── Submeter linha da tabela (recolhe dados do TR directamente) ──────────
+        function submeterLinha(btn) {
+            const tr      = btn.closest('tr');
+            const ticket  = tr.dataset.ticket;
+            const medico  = (tr.querySelector('[name=medico]')  || {value:''}).value;
+            // processo: select se existir, senão o data-proc já guardado
+            const selProc = tr.querySelector('[name=processo]');
+            const dataProc= (tr.querySelector('[data-proc]') || {dataset:{proc:''}}).dataset.proc;
+            const processo = selProc ? selProc.value : dataProc;
+            const estado  = (tr.querySelector('[name=estado]')  || {value:'Pendente'}).value;
+
+            if (!medico) { mostrarToast('Seleccione um médico primeiro.', false); return; }
+
+            const fd = new FormData();
+            fd.append('action',   'update');
+            fd.append('ticket',   ticket);
+            fd.append('medico',   medico);
+            fd.append('processo', processo);
+            fd.append('estado',   estado);
+
             spinner(true);
             const ini = Date.now();
             fetch(window.location.href, {
                 method: 'POST',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                body: new FormData(form)
+                body: fd
             })
             .then(r => r.json())
             .then(res => {
-                const rest = Math.max(0, 1800 - (Date.now() - ini));
+                const rest = Math.max(0, 900 - (Date.now() - ini));
                 setTimeout(() => {
                     spinner(false);
-                    mostrarToast(res.type === 1 ? '✓ Guardado com sucesso!' : '✓ Notificação enviada!', res.ok);
+                    mostrarToast('✓ Guardado com sucesso!', res.ok);
                 }, rest);
             })
             .catch(() => { spinner(false); mostrarToast('Erro de ligação.', false); });
         }
 
+        // ── Submeter form de notificação ──────────────────────────────────────────
+        function ajaxForm(form) {
+            const fd = new FormData(form);
+            spinner(true);
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: fd
+            })
+            .then(r => r.json())
+            .then(res => {
+                spinner(false);
+                mostrarToast('✓ Notificação guardada!', res.ok);
+            })
+            .catch(() => { spinner(false); mostrarToast('Erro de ligação.', false); });
+        }
+
+        // ── Actualizar selects + botão ao escolher médico ─────────────────────────
         function actualizarLinha(sel) {
-            const tr = sel.closest('tr');
-            const medico = sel.value;
-            const selEst = tr.querySelector('.sel-estado');
-            const btn = tr.querySelector('.btn-acao');
+            const tr     = sel.closest('tr');
+            const medico  = sel.value;
+            const selEst  = tr.querySelector('.sel-estado');
+            const btn     = tr.querySelector('.btn-acao');
             if (!selEst || !btn) return;
             const saved = selEst.dataset.savedEstado || 'Pendente';
             const isClinica = medico === MEDICO_CLINICA;
@@ -571,6 +652,7 @@
                 selEst.appendChild(o);
             });
             if (!selEst.value) selEst.value = 'Pendente';
+            btn.disabled = false;
             if (isClinica) {
                 btn.textContent = 'Mandar Consulta';
                 btn.className = 'btn-clinica btn-acao';
@@ -585,13 +667,16 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            // Inicializar cada linha
             document.querySelectorAll('.sel-medico').forEach(s => {
                 actualizarLinha(s);
                 s.addEventListener('change', () => actualizarLinha(s));
             });
-            document.querySelectorAll('form').forEach(f => {
-                f.addEventListener('submit', e => { e.preventDefault(); ajaxSubmit(f); });
-            });
+            // Form de notificação (único form real na página)
+            const fNotif = document.querySelector('form[data-notif]');
+            if (fNotif) {
+                fNotif.addEventListener('submit', e => { e.preventDefault(); ajaxForm(fNotif); });
+            }
         });
 
         // Chart
