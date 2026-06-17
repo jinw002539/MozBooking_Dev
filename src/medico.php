@@ -317,6 +317,7 @@
                         <thead>
                             <tr>
                                 <th>Senha</th>
+                                <th>Hora</th>
                                 <th>Tipo</th>
                                 <th>Paciente</th>
                                 <th>Processo</th>
@@ -326,13 +327,14 @@
                         </thead>
                         <tbody id="tbodyMedico">
                         <?php if (empty($hoje_list)): ?>
-                            <tr><td colspan="6" style="padding:40px;text-align:center;color:var(--muted);">Nenhuma marcação para hoje.</td></tr>
+                            <tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted);">Nenhuma marcação para hoje.</td></tr>
                         <?php else: ?>
                         <?php foreach ($hoje_list as $m):
                             $concluida = in_array($m['estado'], ['Concluido','Cancelado']);
                         ?>
                         <tr <?= $concluida ? 'style="opacity:0.4;"' : '' ?>>
                             <td><span class="ticket-pill <?= $concluida ? 'done' : '' ?>"><?= htmlspecialchars($m['ticket']) ?></span></td>
+                            <td style="font-family:monospace;font-size:12.5px;color:var(--text);"><?= htmlspecialchars(formatar_hora($m['hora']) ?: '—') ?></td>
                             <td>
                                 <?= $m['urgencia'] === 'urgente'
                                     ? '<span class="badge badge-urgent">URGENTE</span>'

@@ -32,7 +32,10 @@
             'btn_submit' => 'Solicitar Agendamento',
             'modal_titulo' => 'Consulta Agendada!',
             'modal_msg' => 'Guarde o seu codigo que vem na senha. Apresente-o na receção.',
+            'modal_pdf_btn' => 'Descarregar Comprovativo (PDF)',
+            'modal_pdf_aviso' => 'Guarde este comprovativo — vai precisar do ticket para saber a hora da sua consulta.',
             'modal_btn' => 'Entendi, obrigado!',
+            'ver_consulta' => 'Ver Consulta',
             'acesso_staff' => 'Acesso Interno',
             'footer_direitos' => '© 2026 Vida Centro de Saúde. Todos os direitos reservados.',
             'sobre' => 'Sobre Nós',
@@ -64,7 +67,10 @@
             'btn_submit' => 'Request Appointment',
             'modal_titulo' => 'Appointment Booked!',
             'modal_msg' => 'Please save your ticket number and present it at reception.',
+            'modal_pdf_btn' => 'Download Receipt (PDF)',
+            'modal_pdf_aviso' => 'Keep this receipt — you will need the ticket to check your appointment time.',
             'modal_btn' => 'Got it, thank you!',
+            'ver_consulta' => 'Check Appointment',
             'acesso_staff' => 'Staff Access',
             'footer_direitos' => '© 2026 Vida Health Centre. All rights reserved.',
             'sobre' => 'About Us',
@@ -114,7 +120,7 @@
         if ($data_escolhida === $hoje_servidor && $hora_servidor >= 16) {
             $fora_de_horas = true;
         } else {
-            $ticketGerado = 'V-' . strtoupper(substr(md5(uniqid(rand(), true)), 0, 6));
+            $ticketGerado = gerar_ticket();
 
             db()->prepare("
                 INSERT INTO marcacoes (ticket, data, cliente, urgencia, estado, medico, processo, criado_em)
@@ -183,14 +189,26 @@
             <a href="index.php?lang=<?= $lang ?>" class="brand text-white text-2xl tracking-wide">
                 <span class="text-cyan-400">Vida</span> Centro de Saúde
             </a>
-            <div class="flex items-center gap-6">
+            <div class="flex items-center gap-5">
                 <a href="#servicos" class="text-white/80 hover:text-cyan-400 text-sm font-medium transition hidden md:block"><?= $t['servicos'] ?></a>
                 <a href="#sobre" class="text-white/80 hover:text-cyan-400 text-sm font-medium transition hidden md:block"><?= $t['sobre'] ?></a>
+                <a href="consulta.php?lang=<?= $lang ?>" class="text-white/80 hover:text-cyan-400 text-sm font-medium transition hidden md:block"><?= $t['ver_consulta'] ?></a>
                 <a href="#marcar" class="btn-primary text-white px-5 py-2 rounded-full text-sm font-semibold"><?= $t['btn_marcar'] ?></a>
-                <a href="?lang=<?= $outro_lang ?>" class="text-white/60 hover:text-white text-xs border border-white/20 px-3 py-1 rounded-full transition"><?= $outro_lang_label ?></a>
+                <a href="login.php" class="flex items-center gap-1.5 border border-white/50 hover:border-cyan-400 hover:text-cyan-400 text-white px-4 py-2 rounded-full text-sm font-semibold transition">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+                    <span class="hidden sm:inline"><?= $t['acesso_staff'] ?></span>
+                </a>
             </div>
         </div>
     </nav>
+
+    <!-- SELECTOR DE IDIOMA — fora da navbar, flutuante e sempre visível -->
+    <a href="?lang=<?= $outro_lang ?>" id="lang-float"
+        class="fixed z-30 bottom-5 right-5 bg-white shadow-lg hover:shadow-xl text-xs font-bold px-4 py-2.5 rounded-full flex items-center gap-2 transition"
+        style="color:#0a1f44;">
+        <svg width="14" height="14" fill="none" stroke="#0a1f44" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        <?= $outro_lang_label ?>
+    </a>
 
     <!-- HERO -->
     <header class="hero-bg min-h-screen flex items-center justify-center text-center text-white pt-20">
@@ -535,12 +553,31 @@
                 <div class="text-xs text-gray-400 uppercase tracking-widest mb-1">Ticket</div>
                 <div class="text-4xl font-bold tracking-widest" style="color:#0a1f44"><?= $ticketGerado ?></div>
             </div>
+            <a href="recibo.php?ticket=<?= urlencode($ticketGerado) ?>" target="_blank"
+                class="btn-primary w-full text-white py-3 rounded-full font-bold mb-3 inline-flex items-center justify-center gap-2">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"/></svg>
+                <?= $t['modal_pdf_btn'] ?>
+            </a>
+            <p class="text-xs text-gray-400 mb-5"><?= $t['modal_pdf_aviso'] ?></p>
             <button onclick="document.getElementById('modalSucesso').remove()"
-                class="btn-primary text-white px-10 py-3 rounded-full font-bold">
+                class="text-gray-500 hover:text-gray-700 px-10 py-2 rounded-full font-semibold text-sm transition">
                 <?= $t['modal_btn'] ?>
             </button>
         </div>
     </div>
+    <script>
+        // Descarrega automaticamente o comprovativo em PDF (sem abrir nova aba/popup)
+        (function() {
+            try {
+                var a = document.createElement('a');
+                a.href = 'recibo.php?ticket=<?= rawurlencode($ticketGerado) ?>';
+                a.download = 'comprovativo_<?= rawurlencode($ticketGerado) ?>.pdf';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } catch (e) { /* ignora — o botão manual fica sempre disponível */ }
+        })();
+    </script>
     <?php endif; ?>
 
 

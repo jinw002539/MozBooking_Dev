@@ -416,6 +416,12 @@
                             <svg width="13" height="13" fill="none" stroke="#3b82f6" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                             <strong><?= htmlspecialchars($h['medico'] ?: '—') ?></strong>
                         </div>
+                        <?php if (!empty($h['hora'])): ?>
+                        <div class="hist-meta-item">
+                            <svg width="13" height="13" fill="none" stroke="#3b82f6" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
+                            <strong><?= htmlspecialchars(formatar_hora($h['hora'])) ?></strong>
+                        </div>
+                        <?php endif; ?>
                         <?php if (!empty($h['processo'])): ?>
                         <div class="hist-meta-item">
                             <svg width="13" height="13" fill="none" stroke="#3b82f6" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>

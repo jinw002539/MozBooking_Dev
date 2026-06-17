@@ -13,7 +13,7 @@
             $stmt->execute([$username]);
             $user = $stmt->fetch();
 
-            if ($user && $user['chave'] === $chave) {
+            if ($user && password_verify($chave, $user['chave'])) {
                 session_regenerate_id(true);
                 $_SESSION['usuario_id']   = $user['id'];
                 $_SESSION['usuario_nome'] = $user['nome'];

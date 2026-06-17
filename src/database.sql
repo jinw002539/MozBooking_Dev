@@ -14,7 +14,7 @@
 CREATE TABLE IF NOT EXISTS staff (
     id          SERIAL PRIMARY KEY,
     username    VARCHAR(50)  NOT NULL UNIQUE,   -- id de login
-    chave       VARCHAR(100) NOT NULL,           -- password (texto simples por agora)
+    chave       VARCHAR(100) NOT NULL,           -- hash da password (password_hash/BCRYPT)
     nome        VARCHAR(150) NOT NULL,
     tipo        VARCHAR(20)  NOT NULL CHECK (tipo IN ('medico', 'recepcionista')),
     clinica     BOOLEAN      NOT NULL DEFAULT FALSE,  -- TRUE = médico interno da clínica
@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS marcacoes (
     id          SERIAL PRIMARY KEY,
     ticket      VARCHAR(30)  NOT NULL UNIQUE,
     data        DATE         NOT NULL,
+    hora        TIME         NULL,              -- definida pela recepcionista
     cliente     VARCHAR(10)  NOT NULL DEFAULT 'antigo' CHECK (cliente IN ('novo', 'antigo')),
     urgencia    VARCHAR(10)  NOT NULL DEFAULT 'normal' CHECK (urgencia IN ('normal', 'urgente')),
     estado      VARCHAR(20)  NOT NULL DEFAULT 'Pendente'
@@ -63,10 +64,13 @@ CREATE TRIGGER set_updated_em
 -- DADOS INICIAIS — STAFF
 -- ============================================================
 
+-- Passwords em texto simples substituídas por hash bcrypt (password_hash / PASSWORD_BCRYPT).
+-- Hash de 'armando'  = 1234arma | Hash de 'maria' e 'luisa' = vida2026
+-- Para gerar novos hashes ao adicionar staff, usa: php gerar_hash.php "nova_password"
 INSERT INTO staff (username, chave, nome, tipo, clinica) VALUES
-    ('armando', '1234arma', 'Dr. Armando Silva',   'medico',        TRUE),
-    ('maria',   'vida2026', 'Maria Santos',         'recepcionista', FALSE),
-    ('luisa',   'vida2026', 'Luísa Mário',          'recepcionista', FALSE)
+    ('armando', '$2y$10$iNSfjT.pO0x8zGP.ED9CueNBOa4x2UKgh8CaCJX99tU9Rxo6YoTHm', 'Dr. Armando Silva', 'medico',        TRUE),
+    ('maria',   '$2y$10$Mf6fkbZ9WykMq/kIEuSHDu.K9UZ9IATFo/uPXWtu7/xK3efOUk2ey', 'Maria Santos',      'recepcionista', FALSE),
+    ('luisa',   '$2y$10$JkOIE84OgqSs4Xj3ocoGAe2b6K9gwmyiVaXd9h4Y7g3M50rWyZsUq', 'Luísa Mário',       'recepcionista', FALSE)
 ON CONFLICT (username) DO NOTHING;
 
 -- ============================================================

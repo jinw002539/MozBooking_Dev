@@ -13,8 +13,8 @@ date_default_timezone_set('Africa/Maputo');
 define('DB_HOST', 'localhost');
 define('DB_PORT', '5432');
 define('DB_NAME', 'clinica_vida');
-define('DB_USER', 'kali');
-define('DB_PASS', 'kalilinux');      // <-- altere para a sua senha
+define('DB_USER', 'deby');
+define('DB_PASS', 'debby');      // <-- altere para a sua senha
 
 // ── MÉDICOS (configuração central) ───────────────────────────────────────────
 define('MEDICO_CLINICA', 'Dr. Armando Silva');
@@ -60,6 +60,17 @@ function is_medico_externo(string $nome): bool {
 function get_notificacao(): ?array {
     $row = db()->query("SELECT * FROM notificacoes ORDER BY id DESC LIMIT 1")->fetch();
     return $row ?: null;
+}
+
+/** Formata a coluna `hora` (HH:MM:SS ou null) para exibição "HH:MM" */
+function formatar_hora(?string $hora): string {
+    if (!$hora) return '';
+    return substr($hora, 0, 5);
+}
+
+/** Valida um valor de hora vindo de um <input type="time"> (HH:MM) */
+function hora_valida(?string $hora): bool {
+    return (bool)preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', (string)$hora);
 }
 
 /** Gera um ticket único no formato V-XXXXXX */

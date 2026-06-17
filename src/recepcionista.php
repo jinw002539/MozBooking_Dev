@@ -18,6 +18,8 @@
             $medico   = trim($_POST['medico']   ?? '');
             $processo = trim($_POST['processo'] ?? '');
             $estado   = trim($_POST['estado']   ?? 'Pendente');
+            $horaPost = trim($_POST['hora']     ?? '');
+            $hora     = hora_valida($horaPost) ? $horaPost : null;
 
             // Regras de negócio
             if ($estado === 'Em atendimento') $estado = 'Pendente';
@@ -26,10 +28,10 @@
 
             $stmt = $pdo->prepare("
                 UPDATE marcacoes
-                SET medico = ?, processo = ?, estado = ?
+                SET medico = ?, processo = ?, estado = ?, hora = ?
                 WHERE ticket = ?
             ");
-            $stmt->execute([$medico, $processo, $estado, $ticket]);
+            $stmt->execute([$medico, $processo, $estado, $hora, $ticket]);
 
             if ($is_ajax) {
                 header('Content-Type: application/json');
@@ -216,14 +218,14 @@
             }
             
             /* Form controls */
-            select, input[type=text] {
+            select, input[type=text], input[type=time] {
                 background: rgba(15,60,120,0.06);
                 border: 1px solid rgba(15,60,120,0.12);
                 border-radius: 8px; padding: 6px 10px;
                 font-size: 12.5px; color: var(--text);
                 transition: border-color .2s;
             }
-            select:focus, input[type=text]:focus {
+            select:focus, input[type=text]:focus, input[type=time]:focus {
                 outline: none;
                 border-color: var(--teal);
                 box-shadow: 0 0 0 3px rgba(15,212,200,.1);
@@ -409,6 +411,7 @@
                         <thead>
                             <tr>
                                 <th>Ticket</th>
+                                <th>Hora</th>
                                 <th>Tipo</th>
                                 <th>Paciente</th>
                                 <th>Médico</th>
@@ -419,7 +422,7 @@
                         </thead>
                         <tbody id="tbodyRecep">
                         <?php if (empty($marcacoes_hoje)): ?>
-                            <tr><td colspan="7" style="padding:40px;text-align:center;color:var(--muted);">Nenhuma marcação para hoje.</td></tr>
+                            <tr><td colspan="8" style="padding:40px;text-align:center;color:var(--muted);">Nenhuma marcação para hoje.</td></tr>
                         <?php else: ?>
                         <?php foreach ($marcacoes_hoje as $m):
                             $med_saved   = $m['medico'] ?? '';
@@ -449,6 +452,17 @@
                         <tr class="<?= $tr_class ?>" data-ticket="<?= htmlspecialchars($m['ticket']) ?>">
 
                             <td><span class="ticket-pill <?= $terminada ? 'done' : '' ?>"><?= htmlspecialchars($m['ticket']) ?></span></td>
+
+                            <!-- HORA -->
+                            <td>
+                                <?php if ($terminada || $aguarda_int): ?>
+                                    <span style="font-family:monospace;font-size:12.5px;color:var(--text);"><?= htmlspecialchars(formatar_hora($m['hora']) ?: '—') ?></span>
+                                <?php else: ?>
+                                    <input type="time" name="hora" class="inp-hora" style="min-width:100px;"
+                                           value="<?= htmlspecialchars(formatar_hora($m['hora'])) ?>">
+                                <?php endif; ?>
+                            </td>
+
                             <td>
                                 <?= $m['urgencia'] === 'urgente'
                                     ? '<span class="badge badge-urgent">URGENTE</span>'
@@ -586,8 +600,9 @@
             const dataProc= (tr.querySelector('[data-proc]') || {dataset:{proc:''}}).dataset.proc;
             const processo = selProc ? selProc.value : dataProc;
             const estado  = (tr.querySelector('[name=estado]')  || {value:'Pendente'}).value;
+            const hora    = (tr.querySelector('[name=hora]')    || {value:''}).value;
 
-            if (!medico) { mostrarToast('Seleccione um médico primeiro.', false); return; }
+            if (!medico && !hora) { mostrarToast('Seleccione um médico ou defina a hora primeiro.', false); return; }
 
             const fd = new FormData();
             fd.append('action',   'update');
@@ -595,6 +610,7 @@
             fd.append('medico',   medico);
             fd.append('processo', processo);
             fd.append('estado',   estado);
+            fd.append('hora',     hora);
 
             spinner(true);
             const ini = Date.now();
@@ -637,6 +653,7 @@
             const medico  = sel.value;
             const selEst  = tr.querySelector('.sel-estado');
             const btn     = tr.querySelector('.btn-acao');
+            const inpHora = tr.querySelector('.inp-hora');
             if (!selEst || !btn) return;
             const saved = selEst.dataset.savedEstado || 'Pendente';
             const isClinica = medico === MEDICO_CLINICA;
@@ -662,7 +679,8 @@
             } else {
                 btn.textContent = 'Guardar';
                 btn.className = 'btn-ghost btn-acao';
-                btn.disabled = true;
+                // permite guardar só a hora antes de atribuir médico
+                btn.disabled = !(inpHora && inpHora.value);
             }
         }
 
@@ -671,6 +689,13 @@
             document.querySelectorAll('.sel-medico').forEach(s => {
                 actualizarLinha(s);
                 s.addEventListener('change', () => actualizarLinha(s));
+            });
+            // Hora: ao preencher antes de atribuir médico, reavalia se já pode guardar
+            document.querySelectorAll('.inp-hora').forEach(inp => {
+                inp.addEventListener('input', () => {
+                    const selMed = inp.closest('tr').querySelector('.sel-medico');
+                    if (selMed) actualizarLinha(selMed);
+                });
             });
             // Form de notificação (único form real na página)
             const fNotif = document.querySelector('form[data-notif]');
